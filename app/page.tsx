@@ -10,6 +10,7 @@ import ManagementPanel from './components/ManagementPanel'
 import TransactionHistory from './components/TransactionHistory'
 import Dashboard from './components/Dashboard'
 import PasswordProtection from './components/PasswordProtection'
+import SupabaseTest from './components/SupabaseTest'
 import SharedStorage, { Site, Tenant, BillingRecord } from './lib/sharedStorage'
 
 interface BillingData {
@@ -481,6 +482,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SupabaseTest />
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

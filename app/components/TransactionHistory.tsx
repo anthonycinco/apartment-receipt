@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { FileText, Image as ImageIcon, Eye, Calendar, Download, Search, Filter } from 'lucide-react'
+import { FileText, Image as ImageIcon, Eye, Calendar, Download, Search, Filter, ChevronDown, ChevronRight } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import ReceiptPreview from './ReceiptPreview'
@@ -78,6 +78,10 @@ const months = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
+interface GroupedTransactions {
+  [key: string]: BillingRecord[]
+}
+
 export default function TransactionHistory({
   billingRecords,
   sites,
@@ -92,6 +96,7 @@ export default function TransactionHistory({
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [selectedRecord, setSelectedRecord] = useState<BillingRecord | null>(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   
   const receiptRef = useRef<HTMLDivElement>(null)
   const meterPhotosRef = useRef<HTMLDivElement>(null)
@@ -115,6 +120,25 @@ export default function TransactionHistory({
     return matchesMonth && matchesYear && matchesSite && matchesTenant && matchesSearch
   })
 
+  // Group transactions by month and year
+  const groupedTransactions: GroupedTransactions = filteredRecords.reduce((groups, record) => {
+    const key = `${record.month} ${record.year}`
+    if (!groups[key]) {
+      groups[key] = []
+    }
+    groups[key].push(record)
+    return groups
+  }, {} as GroupedTransactions)
+
+  // Sort groups by date (newest first)
+  const sortedGroups = Object.entries(groupedTransactions).sort(([a], [b]) => {
+    const [monthA, yearA] = a.split(' ')
+    const [monthB, yearB] = b.split(' ')
+    const yearDiff = parseInt(yearB) - parseInt(yearA)
+    if (yearDiff !== 0) return yearDiff
+    return months.indexOf(monthB) - months.indexOf(monthA)
+  })
+
   // Get unique years and months from records
   const years = Array.from(new Set(billingRecords.map(r => r.year))).sort((a, b) => b.localeCompare(a))
   const monthsInRecords = Array.from(new Set(billingRecords.map(r => r.month))).sort((a, b) => 
@@ -134,6 +158,25 @@ export default function TransactionHistory({
   const closeDetails = () => {
     setShowDetails(false)
     setSelectedRecord(null)
+  }
+
+  const toggleGroup = (groupKey: string) => {
+    const newExpanded = new Set(expandedGroups)
+    if (newExpanded.has(groupKey)) {
+      newExpanded.delete(groupKey)
+    } else {
+      newExpanded.add(groupKey)
+    }
+    setExpandedGroups(newExpanded)
+  }
+
+  const expandAllGroups = () => {
+    const allGroups = new Set(sortedGroups.map(([key]) => key))
+    setExpandedGroups(allGroups)
+  }
+
+  const collapseAllGroups = () => {
+    setExpandedGroups(new Set())
   }
 
   // Export functions for selected record
@@ -371,94 +414,144 @@ export default function TransactionHistory({
             </p>
           </div>
         </div>
+
+        {/* Group Controls */}
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Transactions by Month</h3>
+          <div className="flex space-x-2">
+            <button
+              onClick={expandAllGroups}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Expand All
+            </button>
+            <button
+              onClick={collapseAllGroups}
+              className="px-3 py-1 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Collapse All
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Records Table */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Site
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tenant
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Door Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Period
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Electricity
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Water
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRecords.map((record) => {
-                const tenant = getTenantById(record.tenantId)
-                const site = getSiteById(record.siteId)
-                
-                if (!tenant || !site) return null
-                
-                return (
-                  <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(record.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {site.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tenant.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tenant.doorNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.month} {record.year}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.electricityConsumption} kWh
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.waterConsumption} m³
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ₱{record.totalAmount.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <button
-                        onClick={() => handleViewDetails(record)}
-                        className="text-blue-600 hover:text-blue-900 font-medium"
-                      >
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+      {/* Grouped Records */}
+      <div className="space-y-4">
+        {sortedGroups.map(([groupKey, records]) => {
+          const [month, year] = groupKey.split(' ')
+          const isExpanded = expandedGroups.has(groupKey)
+          const groupTotal = records.reduce((sum, record) => sum + record.totalAmount, 0)
+          
+          return (
+            <div key={groupKey} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              {/* Group Header */}
+              <div 
+                className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => toggleGroup(groupKey)}
+              >
+                <div className="flex items-center space-x-3">
+                  {isExpanded ? (
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                  )}
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-900">{month} {year}</h4>
+                    <p className="text-sm text-gray-600">{records.length} transaction{records.length !== 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-green-600">₱{groupTotal.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">Total Revenue</p>
+                </div>
+              </div>
+
+              {/* Group Content */}
+              {isExpanded && (
+                <div className="border-t border-gray-200">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Site
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Tenant
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Door Number
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Electricity
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Water
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Total
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {records.map((record) => {
+                          const tenant = getTenantById(record.tenantId)
+                          const site = getSiteById(record.siteId)
+                          
+                          if (!tenant || !site) return null
+                          
+                          return (
+                            <tr key={record.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {new Date(record.date).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {site.name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {tenant.name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {tenant.doorNumber}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {record.electricityConsumption} kWh
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {record.waterConsumption} m³
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                ₱{record.totalAmount.toLocaleString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <button
+                                  onClick={() => handleViewDetails(record)}
+                                  className="text-blue-600 hover:text-blue-900 font-medium"
+                                >
+                                  View Details
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
         
-        {filteredRecords.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No records found matching your criteria.</p>
+        {sortedGroups.length === 0 && (
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
+            <p className="text-gray-500 text-lg">No transactions found matching your criteria.</p>
           </div>
         )}
       </div>

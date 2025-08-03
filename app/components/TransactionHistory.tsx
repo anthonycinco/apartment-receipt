@@ -183,97 +183,145 @@ export default function TransactionHistory({
   const exportRecordAsPDF = async () => {
     if (!selectedRecord || !receiptRef.current) return
     
-    const canvas = await html2canvas(receiptRef.current, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true
-    })
-    
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const imgWidth = 210
-    const pageHeight = 295
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-    let heightLeft = imgHeight
-
-    let position = 0
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pageHeight
-
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-    }
-
-    // Add meter photos page if photos exist
-    if (selectedRecord.billingData && 
-        (selectedRecord.billingData.electricityPhoto || selectedRecord.billingData.waterPhoto) && 
-        meterPhotosRef.current) {
-      const photosCanvas = await html2canvas(meterPhotosRef.current, {
-        scale: 2,
+    try {
+      console.log('Starting PDF export for record...')
+      
+      // Wait a bit for any pending renders
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // Create receipt canvas
+      const receiptCanvas = await html2canvas(receiptRef.current, {
+        scale: 1.2,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        imageTimeout: 15000,
+        removeContainer: true
       })
       
-      const photosImgData = photosCanvas.toDataURL('image/png')
-      const photosImgHeight = (photosCanvas.height * imgWidth) / photosCanvas.width
-      let photosHeightLeft = photosImgHeight
-
-      pdf.addPage()
-      pdf.addImage(photosImgData, 'PNG', 0, 0, imgWidth, photosImgHeight)
-      photosHeightLeft -= pageHeight
-
-      while (photosHeightLeft >= 0) {
-        const position = photosHeightLeft - photosImgHeight
+      console.log('Receipt canvas created, dimensions:', receiptCanvas.width, 'x', receiptCanvas.height)
+      
+      // Create PDF
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      
+      // Calculate dimensions for receipt
+      const receiptAspectRatio = receiptCanvas.width / receiptCanvas.height
+      const receiptWidth = pageWidth - 20 // 10mm margin on each side
+      const receiptHeight = receiptWidth / receiptAspectRatio
+      
+      // Convert canvas to image
+      const receiptImgData = receiptCanvas.toDataURL('image/jpeg', 0.8)
+      
+      // Add receipt to PDF
+      pdf.addImage(receiptImgData, 'JPEG', 10, 10, receiptWidth, receiptHeight)
+      
+      // Add meter photos page if photos exist
+      if (selectedRecord.billingData && 
+          (selectedRecord.billingData.electricityPhoto || selectedRecord.billingData.waterPhoto) && 
+          meterPhotosRef.current) {
+        console.log('Adding meter photos page...')
+        
+        // Wait a bit for meter photos to render
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        const photosCanvas = await html2canvas(meterPhotosRef.current, {
+          scale: 1.2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          imageTimeout: 15000,
+          removeContainer: true
+        })
+        
+        console.log('Photos canvas created, dimensions:', photosCanvas.width, 'x', photosCanvas.height)
+        
+        // Calculate dimensions for photos
+        const photosAspectRatio = photosCanvas.width / photosCanvas.height
+        const photosWidth = pageWidth - 20
+        const photosHeight = photosWidth / photosAspectRatio
+        
+        // Convert photos canvas to image
+        const photosImgData = photosCanvas.toDataURL('image/jpeg', 0.8)
+        
+        // Add new page for photos
         pdf.addPage()
-        pdf.addImage(photosImgData, 'PNG', 0, position, imgWidth, photosImgHeight)
-        photosHeightLeft -= pageHeight
+        pdf.addImage(photosImgData, 'JPEG', 10, 10, photosWidth, photosHeight)
       }
-    }
 
-    const tenant = getTenantById(selectedRecord.tenantId)
-    const site = getSiteById(selectedRecord.siteId)
-    const fileName = `cinco-apartments-bill-${site?.name || 'unknown'}-${tenant?.doorNumber || 'unknown'}-${selectedRecord.month}-${selectedRecord.year}.pdf`
-    
-    pdf.save(fileName)
+      const tenant = getTenantById(selectedRecord.tenantId)
+      const site = getSiteById(selectedRecord.siteId)
+      const fileName = `cinco-apartments-bill-${site?.name || 'unknown'}-${tenant?.doorNumber || 'unknown'}-${selectedRecord.month}-${selectedRecord.year}.pdf`
+      
+      console.log('Saving PDF as:', fileName)
+      pdf.save(fileName)
+    } catch (error) {
+      console.error('PDF export error:', error)
+      alert('Failed to export PDF: ' + (error as Error).message)
+    }
   }
 
   const exportRecordAsImage = async () => {
     if (!selectedRecord || !receiptRef.current) return
     
-    const canvas = await html2canvas(receiptRef.current, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true
-    })
-    
-    const tenant = getTenantById(selectedRecord.tenantId)
-    const site = getSiteById(selectedRecord.siteId)
-    const fileName = `cinco-apartments-bill-${site?.name || 'unknown'}-${tenant?.doorNumber || 'unknown'}-${selectedRecord.month}-${selectedRecord.year}.png`
-    
-    const link = document.createElement('a')
-    link.download = fileName
-    link.href = canvas.toDataURL()
-    link.click()
-    
-    // Export meter photos as separate image if they exist
-    if (selectedRecord.billingData && 
-        (selectedRecord.billingData.electricityPhoto || selectedRecord.billingData.waterPhoto) && 
-        meterPhotosRef.current) {
-      const photosCanvas = await html2canvas(meterPhotosRef.current, {
-        scale: 2,
+    try {
+      console.log('Starting image export for record...')
+      
+      // Wait a bit for any pending renders
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 1.5,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        imageTimeout: 15000,
+        removeContainer: true
       })
       
-      const photosFileName = `cinco-apartments-meter-photos-${site?.name || 'unknown'}-${tenant?.doorNumber || 'unknown'}-${selectedRecord.month}-${selectedRecord.year}.png`
-      const photosLink = document.createElement('a')
-      photosLink.download = photosFileName
-      photosLink.href = photosCanvas.toDataURL()
-      photosLink.click()
+      console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
+      
+      const tenant = getTenantById(selectedRecord.tenantId)
+      const site = getSiteById(selectedRecord.siteId)
+      const fileName = `cinco-apartments-bill-${site?.name || 'unknown'}-${tenant?.doorNumber || 'unknown'}-${selectedRecord.month}-${selectedRecord.year}.png`
+      
+      const link = document.createElement('a')
+      link.download = fileName
+      link.href = canvas.toDataURL('image/png', 1.0)
+      link.click()
+      
+      // Export meter photos as separate image if they exist
+      if (selectedRecord.billingData && 
+          (selectedRecord.billingData.electricityPhoto || selectedRecord.billingData.waterPhoto) && 
+          meterPhotosRef.current) {
+        console.log('Exporting meter photos as separate image...')
+        
+        // Wait a bit for meter photos to render
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        const photosCanvas = await html2canvas(meterPhotosRef.current, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          imageTimeout: 15000,
+          removeContainer: true
+        })
+        
+        const photosFileName = `cinco-apartments-meter-photos-${site?.name || 'unknown'}-${tenant?.doorNumber || 'unknown'}-${selectedRecord.month}-${selectedRecord.year}.png`
+        const photosLink = document.createElement('a')
+        photosLink.download = photosFileName
+        photosLink.href = photosCanvas.toDataURL('image/png', 1.0)
+        photosLink.click()
+      }
+    } catch (error) {
+      console.error('Image export error:', error)
+      alert('Failed to export image: ' + (error as Error).message)
     }
   }
 

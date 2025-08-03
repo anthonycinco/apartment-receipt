@@ -348,72 +348,67 @@ export default function Home() {
       console.log('Starting PDF export...')
       
       // Wait a bit for any pending renders
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 300))
       
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 1.5,
+      // Create receipt canvas
+      const receiptCanvas = await html2canvas(receiptRef.current, {
+        scale: 1.2,
         useCORS: true,
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        width: receiptRef.current.scrollWidth,
-        height: receiptRef.current.scrollHeight,
-        imageTimeout: 30000
+        imageTimeout: 15000,
+        removeContainer: true
       })
       
-      console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
+      console.log('Receipt canvas created, dimensions:', receiptCanvas.width, 'x', receiptCanvas.height)
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.9)
+      // Create PDF
       const pdf = new jsPDF('p', 'mm', 'a4')
-      const imgWidth = 210
-      const pageHeight = 295
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      let heightLeft = imgHeight
-
-      let position = 0
-
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-        heightLeft -= pageHeight
-      }
-
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      
+      // Calculate dimensions for receipt
+      const receiptAspectRatio = receiptCanvas.width / receiptCanvas.height
+      const receiptWidth = pageWidth - 20 // 10mm margin on each side
+      const receiptHeight = receiptWidth / receiptAspectRatio
+      
+      // Convert canvas to image
+      const receiptImgData = receiptCanvas.toDataURL('image/jpeg', 0.8)
+      
+      // Add receipt to PDF
+      pdf.addImage(receiptImgData, 'JPEG', 10, 10, receiptWidth, receiptHeight)
+      
       // Add meter photos page if photos exist
       if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
         console.log('Adding meter photos page...')
         
         // Wait a bit for meter photos to render
-        await new Promise(resolve => setTimeout(resolve, 200))
+        await new Promise(resolve => setTimeout(resolve, 300))
         
         const photosCanvas = await html2canvas(meterPhotosRef.current, {
-          scale: 1.5,
+          scale: 1.2,
           useCORS: true,
           allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
-          width: meterPhotosRef.current.scrollWidth,
-          height: meterPhotosRef.current.scrollHeight,
-          imageTimeout: 30000
+          imageTimeout: 15000,
+          removeContainer: true
         })
         
-        const photosImgData = photosCanvas.toDataURL('image/jpeg', 0.9)
-        const photosImgHeight = (photosCanvas.height * imgWidth) / photosCanvas.width
-        let photosHeightLeft = photosImgHeight
-
+        console.log('Photos canvas created, dimensions:', photosCanvas.width, 'x', photosCanvas.height)
+        
+        // Calculate dimensions for photos
+        const photosAspectRatio = photosCanvas.width / photosCanvas.height
+        const photosWidth = pageWidth - 20
+        const photosHeight = photosWidth / photosAspectRatio
+        
+        // Convert photos canvas to image
+        const photosImgData = photosCanvas.toDataURL('image/jpeg', 0.8)
+        
+        // Add new page for photos
         pdf.addPage()
-        pdf.addImage(photosImgData, 'JPEG', 0, 0, imgWidth, photosImgHeight)
-        photosHeightLeft -= pageHeight
-
-        while (photosHeightLeft >= 0) {
-          const position = photosHeightLeft - photosImgHeight
-          pdf.addPage()
-          pdf.addImage(photosImgData, 'JPEG', 0, position, imgWidth, photosImgHeight)
-          photosHeightLeft -= pageHeight
-        }
+        pdf.addImage(photosImgData, 'JPEG', 10, 10, photosWidth, photosHeight)
       }
 
       const fileName = `cinco-apartments-bill-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.pdf`
@@ -438,17 +433,16 @@ export default function Home() {
       console.log('Starting image export...')
       
       // Wait a bit for any pending renders
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 300))
       
       const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        width: receiptRef.current.scrollWidth,
-        height: receiptRef.current.scrollHeight,
-        imageTimeout: 30000
+        imageTimeout: 15000,
+        removeContainer: true
       })
       
       console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
@@ -465,17 +459,16 @@ export default function Home() {
         console.log('Exporting meter photos as separate image...')
         
         // Wait a bit for meter photos to render
-        await new Promise(resolve => setTimeout(resolve, 200))
+        await new Promise(resolve => setTimeout(resolve, 300))
         
         const photosCanvas = await html2canvas(meterPhotosRef.current, {
-          scale: 2,
+          scale: 1.5,
           useCORS: true,
           allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
-          width: meterPhotosRef.current.scrollWidth,
-          height: meterPhotosRef.current.scrollHeight,
-          imageTimeout: 30000
+          imageTimeout: 15000,
+          removeContainer: true
         })
         
         const photosFileName = `cinco-apartments-meter-photos-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.png`

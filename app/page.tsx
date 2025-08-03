@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Download, FileText, Image as ImageIcon, Calculator, Zap, Droplets, Home, User, Calendar } from 'lucide-react'
+import { Download, FileText, Image as ImageIcon, Calculator, Zap, Droplets, Home as HomeIcon, User, Calendar } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -238,7 +238,7 @@ export default function Home() {
             {/* Basic Information */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                <Home className="w-5 h-5 mr-2" />
+                <HomeIcon className="w-5 h-5 mr-2" />
                 Basic Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

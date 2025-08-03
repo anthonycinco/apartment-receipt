@@ -357,12 +357,13 @@ export default function Home() {
         logging: false,
         backgroundColor: '#ffffff',
         width: receiptRef.current.scrollWidth,
-        height: receiptRef.current.scrollHeight
+        height: receiptRef.current.scrollHeight,
+        imageTimeout: 15000
       })
       
       console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
       
-      const imgData = canvas.toDataURL('image/png', 1.0)
+      const imgData = canvas.toDataURL('image/jpeg', 0.95)
       const pdf = new jsPDF('p', 'mm', 'a4')
       const imgWidth = 210
       const pageHeight = 295
@@ -371,13 +372,13 @@ export default function Home() {
 
       let position = 0
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
 
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight
         pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
         heightLeft -= pageHeight
       }
 
@@ -395,21 +396,22 @@ export default function Home() {
           logging: false,
           backgroundColor: '#ffffff',
           width: meterPhotosRef.current.scrollWidth,
-          height: meterPhotosRef.current.scrollHeight
+          height: meterPhotosRef.current.scrollHeight,
+          imageTimeout: 15000
         })
         
-        const photosImgData = photosCanvas.toDataURL('image/png', 1.0)
+        const photosImgData = photosCanvas.toDataURL('image/jpeg', 0.95)
         const photosImgHeight = (photosCanvas.height * imgWidth) / photosCanvas.width
         let photosHeightLeft = photosImgHeight
 
         pdf.addPage()
-        pdf.addImage(photosImgData, 'PNG', 0, 0, imgWidth, photosImgHeight)
+        pdf.addImage(photosImgData, 'JPEG', 0, 0, imgWidth, photosImgHeight)
         photosHeightLeft -= pageHeight
 
         while (photosHeightLeft >= 0) {
           const position = photosHeightLeft - photosImgHeight
           pdf.addPage()
-          pdf.addImage(photosImgData, 'PNG', 0, position, imgWidth, photosImgHeight)
+          pdf.addImage(photosImgData, 'JPEG', 0, position, imgWidth, photosImgHeight)
           photosHeightLeft -= pageHeight
         }
       }
@@ -445,7 +447,8 @@ export default function Home() {
         logging: false,
         backgroundColor: '#ffffff',
         width: receiptRef.current.scrollWidth,
-        height: receiptRef.current.scrollHeight
+        height: receiptRef.current.scrollHeight,
+        imageTimeout: 15000
       })
       
       console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
@@ -471,7 +474,8 @@ export default function Home() {
           logging: false,
           backgroundColor: '#ffffff',
           width: meterPhotosRef.current.scrollWidth,
-          height: meterPhotosRef.current.scrollHeight
+          height: meterPhotosRef.current.scrollHeight,
+          imageTimeout: 15000
         })
         
         const photosFileName = `cinco-apartments-meter-photos-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.png`
@@ -485,6 +489,39 @@ export default function Home() {
     } catch (error) {
       console.error('Image export error:', error)
       showToast('error', 'Failed to export image: ' + (error as Error).message)
+    }
+  }
+
+  // Clear all fields function
+  const clearAllFields = () => {
+    if (window.confirm('Are you sure you want to clear all fields? This will reset the entire form including uploaded photos.')) {
+      setBillingData({
+        siteName: '',
+        doorNumber: '',
+        tenantName: '',
+        billingMonth: months[new Date().getMonth()],
+        billingYear: new Date().getFullYear().toString(),
+        electricityPrevious: 0,
+        electricityCurrent: 0,
+        electricityPricePerKwh: 12.5,
+        electricityPhoto: null,
+        waterPrevious: 0,
+        waterCurrent: 0,
+        waterRates: {
+          first10: 150,
+          next10: 25,
+          next10_2: 30,
+          above30: 35
+        },
+        waterPhoto: null,
+        baseRent: 0,
+        parkingFee: 500,
+        parkingEnabled: false,
+        damageDescription: '',
+        otherFeeDescription: '',
+        otherFeeAmount: 0
+      })
+      showToast('success', 'All fields cleared successfully!')
     }
   }
 
@@ -527,6 +564,13 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={clearAllFields}
+                className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Clear All
+              </button>
               <button
                 onClick={exportAsImage}
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -606,6 +650,13 @@ export default function Home() {
                 </div>
                 <div className="flex space-x-3">
                   <button
+                    onClick={clearAllFields}
+                    className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Clear All
+                  </button>
+                  <button
                     onClick={exportAsImage}
                     className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
@@ -642,6 +693,7 @@ export default function Home() {
                 tenants={tenants}
                 getSiteById={getSiteById}
                 getTenantById={getTenantById}
+                onClearAll={clearAllFields}
               />
             </div>
 

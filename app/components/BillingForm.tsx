@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calculator, Zap, Droplets, Home, User, Calendar, CreditCard, Upload, Camera } from 'lucide-react'
+import { Calculator, Zap, Droplets, Home, User, Calendar, CreditCard, Upload, Camera, AlertTriangle } from 'lucide-react'
 
 interface Site {
   id: string
@@ -65,6 +65,7 @@ interface BillingFormProps {
   tenants: Tenant[]
   getSiteById: (id: string) => Site | undefined
   getTenantById: (id: string) => Tenant | undefined
+  onClearAll?: () => void
 }
 
 export default function BillingForm({
@@ -83,7 +84,8 @@ export default function BillingForm({
   sites,
   tenants,
   getSiteById,
-  getTenantById
+  getTenantById,
+  onClearAll
 }: BillingFormProps) {
   const [selectedTenantId, setSelectedTenantId] = useState<string>('')
 
@@ -479,6 +481,19 @@ export default function BillingForm({
           <p className="text-sm text-blue-100">Grand Total</p>
           <p className="text-2xl font-bold text-white">₱{grandTotal.toFixed(2)}</p>
         </div>
+        
+        {/* Clear Button */}
+        {onClearAll && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={onClearAll}
+              className="flex items-center justify-center w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Clear All Fields
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

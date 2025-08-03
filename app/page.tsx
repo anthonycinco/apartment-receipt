@@ -26,7 +26,7 @@ interface BillingData {
   waterRates: {
     first10: number
     next10: number
-    next10: number
+    next10_2: number
     above30: number
   }
   waterPhoto: string | null
@@ -63,7 +63,7 @@ export default function Home() {
     waterRates: {
       first10: 150,
       next10: 25,
-      next10: 30,
+      next10_2: 30,
       above30: 35
     },
     waterPhoto: null,
@@ -103,20 +103,20 @@ export default function Home() {
       total += 10 * billingData.waterRates.first10
       remaining -= 10
 
-      if (remaining <= 10) {
-        total += remaining * billingData.waterRates.next10
-      } else {
-        total += 10 * billingData.waterRates.next10
-        remaining -= 10
-
-        if (remaining <= 10) {
+              if (remaining <= 10) {
           total += remaining * billingData.waterRates.next10
         } else {
           total += 10 * billingData.waterRates.next10
           remaining -= 10
-          total += remaining * billingData.waterRates.above30
+
+          if (remaining <= 10) {
+            total += remaining * billingData.waterRates.next10_2
+          } else {
+            total += 10 * billingData.waterRates.next10_2
+            remaining -= 10
+            total += remaining * billingData.waterRates.above30
+          }
         }
-      }
     }
     return total
   }
@@ -414,15 +414,15 @@ export default function Home() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">21-30 m³ (₱/m³)</label>
-                    <input
-                      type="number"
-                      value={billingData.waterRates.next10}
-                      onChange={(e) => updateWaterRates('next10', parseFloat(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
+                                     <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">21-30 m³ (₱/m³)</label>
+                     <input
+                       type="number"
+                       value={billingData.waterRates.next10_2}
+                       onChange={(e) => updateWaterRates('next10_2', parseFloat(e.target.value) || 0)}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     />
+                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Above 30 m³ (₱/m³)</label>
                     <input

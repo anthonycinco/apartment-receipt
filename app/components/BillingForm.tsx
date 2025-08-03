@@ -53,6 +53,7 @@ interface BillingFormProps {
   updateBillingData: (field: keyof BillingData, value: any) => void
   updateWaterRates: (field: keyof BillingData['waterRates'], value: number) => void
   handlePhotoUpload: (type: 'electricity' | 'water', file: File) => void
+  removePhoto: (type: 'electricity' | 'water') => void
   electricityConsumption: number
   electricityTotal: number
   waterConsumption: number
@@ -73,6 +74,7 @@ export default function BillingForm({
   updateBillingData,
   updateWaterRates,
   handlePhotoUpload,
+  removePhoto,
   electricityConsumption,
   electricityTotal,
   waterConsumption,
@@ -266,6 +268,17 @@ export default function BillingForm({
                   )}
                   <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
                 </label>
+                
+                {/* Remove Photo Button */}
+                {billingData.electricityPhoto && (
+                  <button
+                    type="button"
+                    onClick={() => removePhoto('electricity')}
+                    className="mt-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                  >
+                    Remove Photo
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -371,6 +384,17 @@ export default function BillingForm({
                   )}
                   <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
                 </label>
+                
+                {/* Remove Photo Button */}
+                {billingData.waterPhoto && (
+                  <button
+                    type="button"
+                    onClick={() => removePhoto('water')}
+                    className="mt-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                  >
+                    Remove Photo
+                  </button>
+                )}
               </div>
             </div>
           </div>

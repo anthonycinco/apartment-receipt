@@ -348,22 +348,22 @@ export default function Home() {
       console.log('Starting PDF export...')
       
       // Wait a bit for any pending renders
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 200))
       
       const canvas = await html2canvas(receiptRef.current, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
         width: receiptRef.current.scrollWidth,
         height: receiptRef.current.scrollHeight,
-        imageTimeout: 15000
+        imageTimeout: 30000
       })
       
       console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.95)
+      const imgData = canvas.toDataURL('image/jpeg', 0.9)
       const pdf = new jsPDF('p', 'mm', 'a4')
       const imgWidth = 210
       const pageHeight = 295
@@ -387,20 +387,20 @@ export default function Home() {
         console.log('Adding meter photos page...')
         
         // Wait a bit for meter photos to render
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise(resolve => setTimeout(resolve, 200))
         
         const photosCanvas = await html2canvas(meterPhotosRef.current, {
-          scale: 2,
+          scale: 1.5,
           useCORS: true,
           allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
           width: meterPhotosRef.current.scrollWidth,
           height: meterPhotosRef.current.scrollHeight,
-          imageTimeout: 15000
+          imageTimeout: 30000
         })
         
-        const photosImgData = photosCanvas.toDataURL('image/jpeg', 0.95)
+        const photosImgData = photosCanvas.toDataURL('image/jpeg', 0.9)
         const photosImgHeight = (photosCanvas.height * imgWidth) / photosCanvas.width
         let photosHeightLeft = photosImgHeight
 
@@ -438,7 +438,7 @@ export default function Home() {
       console.log('Starting image export...')
       
       // Wait a bit for any pending renders
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 200))
       
       const canvas = await html2canvas(receiptRef.current, {
         scale: 2,
@@ -448,7 +448,7 @@ export default function Home() {
         backgroundColor: '#ffffff',
         width: receiptRef.current.scrollWidth,
         height: receiptRef.current.scrollHeight,
-        imageTimeout: 15000
+        imageTimeout: 30000
       })
       
       console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
@@ -465,7 +465,7 @@ export default function Home() {
         console.log('Exporting meter photos as separate image...')
         
         // Wait a bit for meter photos to render
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise(resolve => setTimeout(resolve, 200))
         
         const photosCanvas = await html2canvas(meterPhotosRef.current, {
           scale: 2,
@@ -475,7 +475,7 @@ export default function Home() {
           backgroundColor: '#ffffff',
           width: meterPhotosRef.current.scrollWidth,
           height: meterPhotosRef.current.scrollHeight,
-          imageTimeout: 15000
+          imageTimeout: 30000
         })
         
         const photosFileName = `cinco-apartments-meter-photos-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.png`
@@ -490,6 +490,12 @@ export default function Home() {
       console.error('Image export error:', error)
       showToast('error', 'Failed to export image: ' + (error as Error).message)
     }
+  }
+
+  // Remove photo function
+  const removePhoto = (type: 'electricity' | 'water') => {
+    updateBillingData(type === 'electricity' ? 'electricityPhoto' : 'waterPhoto', null)
+    showToast('success', `${type.charAt(0).toUpperCase() + type.slice(1)} photo removed!`)
   }
 
   // Clear all fields function
@@ -681,6 +687,7 @@ export default function Home() {
                 updateBillingData={updateBillingData}
                 updateWaterRates={updateWaterRates}
                 handlePhotoUpload={handlePhotoUpload}
+                removePhoto={removePhoto}
                 electricityConsumption={electricityConsumption}
                 electricityTotal={electricityTotal}
                 waterConsumption={waterConsumption}

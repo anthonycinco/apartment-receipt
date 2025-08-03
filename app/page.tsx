@@ -356,6 +356,10 @@ export default function Home() {
               grandTotal={grandTotal}
               months={months}
               years={years}
+              sites={sites}
+              tenants={tenants}
+              getSiteById={getSiteById}
+              getTenantById={getTenantById}
             />
             <ReceiptPreview
               receiptRef={receiptRef}
@@ -372,6 +376,7 @@ export default function Home() {
             tenants={tenants}
             billingRecords={billingRecords}
             getSiteById={getSiteById}
+            getTenantById={getTenantById}
           />
         )}
       </div>

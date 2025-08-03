@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Building2, Users, BarChart3 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -40,14 +41,36 @@ interface ManagementPanelProps {
   tenants: Tenant[]
   billingRecords: BillingRecord[]
   getSiteById: (id: string) => Site | undefined
+  getTenantById: (id: string) => Tenant | undefined
 }
 
 export default function ManagementPanel({
   sites,
   tenants,
   billingRecords,
-  getSiteById
+  getSiteById,
+  getTenantById
 }: ManagementPanelProps) {
+  const [selectedSite, setSelectedSite] = useState<string>('all')
+  const [selectedTenant, setSelectedTenant] = useState<string>('all')
+
+  // Filter records based on selection
+  const filteredRecords = billingRecords.filter(record => {
+    const siteMatch = selectedSite === 'all' || record.siteId === selectedSite
+    const tenantMatch = selectedTenant === 'all' || record.tenantId === selectedTenant
+    return siteMatch && tenantMatch
+  })
+
+  const totalRevenue = filteredRecords.reduce((sum, record) => sum + record.totalAmount, 0)
+  const activeTenants = tenants.filter(t => t.status === 'active' && 
+    (selectedSite === 'all' || getSiteById(t.siteId)?.id === selectedSite))
+  const occupancyRate = selectedSite === 'all' 
+    ? Math.round((sites.reduce((sum, site) => sum + site.occupiedUnits, 0) / sites.reduce((sum, site) => sum + site.totalUnits, 0)) * 100)
+    : (() => {
+        const site = sites.find(s => s.id === selectedSite)
+        return site ? Math.round((site.occupiedUnits / site.totalUnits) * 100) : 0
+      })()
+
   return (
     <div className="space-y-8">
       {/* Sites Management */}
@@ -151,21 +174,61 @@ export default function ManagementPanel({
           <BarChart3 className="w-5 h-5 mr-2" />
           Analytics Dashboard
         </h2>
+        
+        {/* Filters */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Site</label>
+            <select
+              value={selectedSite}
+              onChange={(e) => setSelectedSite(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="all">All Sites</option>
+              {sites.map(site => (
+                <option key={site.id} value={site.id}>{site.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Tenant</label>
+            <select
+              value={selectedTenant}
+              onChange={(e) => setSelectedTenant(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="all">All Tenants</option>
+              {tenants
+                .filter(tenant => selectedSite === 'all' || getSiteById(tenant.siteId)?.id === selectedSite)
+                .map(tenant => (
+                  <option key={tenant.id} value={tenant.id}>{tenant.name} - {tenant.unit}</option>
+                ))}
+            </select>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-blue-50 p-6 rounded-lg">
             <h3 className="text-lg font-medium text-blue-900">Total Revenue</h3>
-            <p className="text-3xl font-bold text-blue-600">₱{billingRecords.reduce((sum, record) => sum + record.totalAmount, 0).toLocaleString()}</p>
-            <p className="text-sm text-blue-600 mt-1">All time</p>
+            <p className="text-3xl font-bold text-blue-600">₱{totalRevenue.toLocaleString()}</p>
+            <p className="text-sm text-blue-600 mt-1">
+              {selectedSite !== 'all' ? getSiteById(selectedSite)?.name : 'All sites'}
+              {selectedTenant !== 'all' && ` - ${getTenantById(selectedTenant)?.name}`}
+            </p>
           </div>
           <div className="bg-green-50 p-6 rounded-lg">
             <h3 className="text-lg font-medium text-green-900">Active Tenants</h3>
-            <p className="text-3xl font-bold text-green-600">{tenants.filter(t => t.status === 'active').length}</p>
-            <p className="text-sm text-green-600 mt-1">Current</p>
+            <p className="text-3xl font-bold text-green-600">{activeTenants.length}</p>
+            <p className="text-sm text-green-600 mt-1">
+              {selectedSite !== 'all' ? getSiteById(selectedSite)?.name : 'All sites'}
+            </p>
           </div>
           <div className="bg-purple-50 p-6 rounded-lg">
             <h3 className="text-lg font-medium text-purple-900">Occupancy Rate</h3>
-            <p className="text-3xl font-bold text-purple-600">{Math.round((sites.reduce((sum, site) => sum + site.occupiedUnits, 0) / sites.reduce((sum, site) => sum + site.totalUnits, 0)) * 100)}%</p>
-            <p className="text-sm text-purple-600 mt-1">Average</p>
+            <p className="text-3xl font-bold text-purple-600">{occupancyRate}%</p>
+            <p className="text-sm text-purple-600 mt-1">
+              {selectedSite !== 'all' ? getSiteById(selectedSite)?.name : 'Average'}
+            </p>
           </div>
         </div>
         
@@ -173,7 +236,7 @@ export default function ManagementPanel({
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Monthly Revenue Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={billingRecords.map(record => ({
+              <LineChart data={filteredRecords.map(record => ({
                 month: record.month,
                 revenue: record.totalAmount
               }))}>
@@ -188,22 +251,24 @@ export default function ManagementPanel({
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Site Performance</h3>
             <div className="space-y-4">
-              {sites.map(site => {
-                const siteRecords = billingRecords.filter(record => record.siteId === site.id)
-                const totalRevenue = siteRecords.reduce((sum, record) => sum + record.totalAmount, 0)
-                return (
-                  <div key={site.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{site.name}</h4>
-                      <p className="text-sm text-gray-500">{site.occupiedUnits}/{site.totalUnits} units occupied</p>
+              {sites
+                .filter(site => selectedSite === 'all' || site.id === selectedSite)
+                .map(site => {
+                  const siteRecords = filteredRecords.filter(record => record.siteId === site.id)
+                  const totalRevenue = siteRecords.reduce((sum, record) => sum + record.totalAmount, 0)
+                  return (
+                    <div key={site.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <h4 className="font-medium text-gray-900">{site.name}</h4>
+                        <p className="text-sm text-gray-500">{site.occupiedUnits}/{site.totalUnits} units occupied</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-gray-900">₱{totalRevenue.toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">Total revenue</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">₱{totalRevenue.toLocaleString()}</p>
-                      <p className="text-sm text-gray-500">Total revenue</p>
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
             </div>
           </div>
         </div>

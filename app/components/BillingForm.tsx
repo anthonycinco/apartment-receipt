@@ -2,6 +2,26 @@
 
 import { HomeIcon, Zap, Droplets, Calculator } from 'lucide-react'
 
+interface Site {
+  id: string
+  name: string
+  address: string
+  totalUnits: number
+  occupiedUnits: number
+}
+
+interface Tenant {
+  id: string
+  name: string
+  siteId: string
+  unit: string
+  phone: string
+  email: string
+  moveInDate: string
+  baseRent: number
+  status: 'active' | 'inactive'
+}
+
 interface BillingData {
   siteName: string
   unit: string
@@ -42,6 +62,10 @@ interface BillingFormProps {
   grandTotal: number
   months: string[]
   years: string[]
+  sites: Site[]
+  tenants: Tenant[]
+  getSiteById: (id: string) => Site | undefined
+  getTenantById: (id: string) => Tenant | undefined
 }
 
 export default function BillingForm({
@@ -56,7 +80,11 @@ export default function BillingForm({
   parkingTotal,
   grandTotal,
   months,
-  years
+  years,
+  sites,
+  tenants,
+  getSiteById,
+  getTenantById
 }: BillingFormProps) {
   return (
     <div className="lg:col-span-2 space-y-6">
@@ -68,34 +96,52 @@ export default function BillingForm({
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
-            <input
-              type="text"
+            <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
+            <select
               value={billingData.siteName}
               onChange={(e) => updateBillingData('siteName', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Laguna, Pidanna"
-            />
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="">Select a site</option>
+              {sites.map(site => (
+                <option key={site.id} value={site.name}>{site.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-            <input
-              type="text"
+            <select
               value={billingData.unit}
               onChange={(e) => updateBillingData('unit', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., A-101"
-            />
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="">Select a unit</option>
+              {tenants
+                .filter(tenant => !billingData.siteName || getSiteById(tenant.siteId)?.name === billingData.siteName)
+                .map(tenant => (
+                  <option key={tenant.id} value={tenant.unit}>{tenant.unit}</option>
+                ))}
+            </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tenant Name</label>
-            <input
-              type="text"
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tenant</label>
+            <select
               value={billingData.tenantName}
-              onChange={(e) => updateBillingData('tenantName', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Tenant's full name"
-            />
+              onChange={(e) => {
+                const selectedTenant = tenants.find(t => t.name === e.target.value)
+                updateBillingData('tenantName', e.target.value)
+                if (selectedTenant) {
+                  updateBillingData('unit', selectedTenant.unit)
+                  updateBillingData('siteName', getSiteById(selectedTenant.siteId)?.name || '')
+                }
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="">Select a tenant</option>
+              {tenants.map(tenant => (
+                <option key={tenant.id} value={tenant.name}>{tenant.name} - {tenant.unit}</option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -103,7 +149,7 @@ export default function BillingForm({
               <select
                 value={billingData.billingMonth}
                 onChange={(e) => updateBillingData('billingMonth', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               >
                 {months.map(month => (
                   <option key={month} value={month}>{month}</option>
@@ -115,7 +161,7 @@ export default function BillingForm({
               <select
                 value={billingData.billingYear}
                 onChange={(e) => updateBillingData('billingYear', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               >
                 {years.map(year => (
                   <option key={year} value={year}>{year}</option>
@@ -139,7 +185,7 @@ export default function BillingForm({
               type="number"
               value={billingData.electricityPrevious}
               onChange={(e) => updateBillingData('electricityPrevious', parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
           <div>
@@ -148,7 +194,7 @@ export default function BillingForm({
               type="number"
               value={billingData.electricityCurrent}
               onChange={(e) => updateBillingData('electricityCurrent', parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
           <div>
@@ -158,7 +204,7 @@ export default function BillingForm({
               step="0.01"
               value={billingData.electricityPricePerKwh}
               onChange={(e) => updateBillingData('electricityPricePerKwh', parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
         </div>
@@ -181,7 +227,7 @@ export default function BillingForm({
               const file = e.target.files?.[0]
               if (file) handlePhotoUpload('electricity', file)
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
           />
           {billingData.electricityPhoto && (
             <div className="mt-2">
@@ -204,7 +250,7 @@ export default function BillingForm({
               type="number"
               value={billingData.waterPrevious}
               onChange={(e) => updateBillingData('waterPrevious', parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
           <div>
@@ -213,7 +259,7 @@ export default function BillingForm({
               type="number"
               value={billingData.waterCurrent}
               onChange={(e) => updateBillingData('waterCurrent', parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
         </div>
@@ -227,7 +273,7 @@ export default function BillingForm({
                 type="number"
                 value={billingData.waterRates.first10}
                 onChange={(e) => updateWaterRates('first10', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
             </div>
             <div>
@@ -236,7 +282,7 @@ export default function BillingForm({
                 type="number"
                 value={billingData.waterRates.next10}
                 onChange={(e) => updateWaterRates('next10', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
             </div>
             <div>
@@ -245,7 +291,7 @@ export default function BillingForm({
                 type="number"
                 value={billingData.waterRates.next10_2}
                 onChange={(e) => updateWaterRates('next10_2', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
             </div>
             <div>
@@ -254,7 +300,7 @@ export default function BillingForm({
                 type="number"
                 value={billingData.waterRates.above30}
                 onChange={(e) => updateWaterRates('above30', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
             </div>
           </div>
@@ -280,7 +326,7 @@ export default function BillingForm({
               const file = e.target.files?.[0]
               if (file) handlePhotoUpload('water', file)
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
           />
           {billingData.waterPhoto && (
             <div className="mt-2">
@@ -303,7 +349,7 @@ export default function BillingForm({
               type="number"
               value={billingData.baseRent}
               onChange={(e) => updateBillingData('baseRent', parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
           <div className="flex items-center space-x-3">
@@ -322,7 +368,7 @@ export default function BillingForm({
                 type="number"
                 value={billingData.parkingFee}
                 onChange={(e) => updateBillingData('parkingFee', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
             </div>
           )}
@@ -334,7 +380,7 @@ export default function BillingForm({
             <textarea
               value={billingData.damageDescription}
               onChange={(e) => updateBillingData('damageDescription', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               rows={2}
               placeholder="Describe any damages..."
             />
@@ -346,7 +392,7 @@ export default function BillingForm({
                 type="text"
                 value={billingData.otherFeeDescription}
                 onChange={(e) => updateBillingData('otherFeeDescription', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                 placeholder="e.g., Late payment fee"
               />
             </div>
@@ -356,7 +402,7 @@ export default function BillingForm({
                 type="number"
                 value={billingData.otherFeeAmount}
                 onChange={(e) => updateBillingData('otherFeeAmount', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
             </div>
           </div>

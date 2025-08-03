@@ -299,100 +299,151 @@ export default function Home() {
 
   // File upload handlers
   const handlePhotoUpload = (type: 'electricity' | 'water', file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const photoData = e.target?.result as string
-      updateBillingData(type === 'electricity' ? 'electricityPhoto' : 'waterPhoto', photoData)
+    try {
+      console.log(`Uploading ${type} photo:`, file.name, file.size, 'bytes')
+      
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const photoData = e.target?.result as string
+        console.log(`${type} photo uploaded successfully, data length:`, photoData.length)
+        updateBillingData(type === 'electricity' ? 'electricityPhoto' : 'waterPhoto', photoData)
+        showToast('success', `${type.charAt(0).toUpperCase() + type.slice(1)} photo uploaded successfully!`)
+      }
+      reader.onerror = (error) => {
+        console.error(`Error reading ${type} photo:`, error)
+        showToast('error', `Failed to upload ${type} photo`)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error(`Error in handlePhotoUpload for ${type}:`, error)
+      showToast('error', `Failed to upload ${type} photo: ${(error as Error).message}`)
     }
-    reader.readAsDataURL(file)
   }
 
   // Export functions
   const exportAsPDF = async () => {
-    if (!receiptRef.current) return
-    
-    const canvas = await html2canvas(receiptRef.current, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true
-    })
-    
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const imgWidth = 210
-    const pageHeight = 295
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-    let heightLeft = imgHeight
-
-    let position = 0
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pageHeight
-
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-    }
-
-    // Add meter photos page if photos exist
-    if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
-      const photosCanvas = await html2canvas(meterPhotosRef.current, {
+    try {
+      if (!receiptRef.current) {
+        console.error('Receipt ref is null')
+        showToast('error', 'Receipt element not found')
+        return
+      }
+      
+      console.log('Starting PDF export...')
+      
+      const canvas = await html2canvas(receiptRef.current, {
         scale: 2,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        logging: true
       })
       
-      const photosImgData = photosCanvas.toDataURL('image/png')
-      const photosImgHeight = (photosCanvas.height * imgWidth) / photosCanvas.width
-      let photosHeightLeft = photosImgHeight
+      console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
+      
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
 
-      pdf.addPage()
-      pdf.addImage(photosImgData, 'PNG', 0, 0, imgWidth, photosImgHeight)
-      photosHeightLeft -= pageHeight
+      let position = 0
 
-      while (photosHeightLeft >= 0) {
-        const position = photosHeightLeft - photosImgHeight
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
         pdf.addPage()
-        pdf.addImage(photosImgData, 'PNG', 0, position, imgWidth, photosImgHeight)
-        photosHeightLeft -= pageHeight
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
       }
-    }
 
-    pdf.save(`cinco-apartments-bill-${billingData.siteName}-${billingData.doorNumber}-${billingData.billingMonth}-${billingData.billingYear}.pdf`)
-    showToast('success', 'PDF exported successfully!')
+      // Add meter photos page if photos exist
+      if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
+        console.log('Adding meter photos page...')
+        const photosCanvas = await html2canvas(meterPhotosRef.current, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: true
+        })
+        
+        const photosImgData = photosCanvas.toDataURL('image/png')
+        const photosImgHeight = (photosCanvas.height * imgWidth) / photosCanvas.width
+        let photosHeightLeft = photosImgHeight
+
+        pdf.addPage()
+        pdf.addImage(photosImgData, 'PNG', 0, 0, imgWidth, photosImgHeight)
+        photosHeightLeft -= pageHeight
+
+        while (photosHeightLeft >= 0) {
+          const position = photosHeightLeft - photosImgHeight
+          pdf.addPage()
+          pdf.addImage(photosImgData, 'PNG', 0, position, imgWidth, photosImgHeight)
+          photosHeightLeft -= pageHeight
+        }
+      }
+
+      const fileName = `cinco-apartments-bill-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.pdf`
+      console.log('Saving PDF as:', fileName)
+      
+      pdf.save(fileName)
+      showToast('success', 'PDF exported successfully!')
+    } catch (error) {
+      console.error('PDF export error:', error)
+      showToast('error', 'Failed to export PDF: ' + (error as Error).message)
+    }
   }
 
   const exportAsImage = async () => {
-    if (!receiptRef.current) return
-    
-    const canvas = await html2canvas(receiptRef.current, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true
-    })
-    
-    const link = document.createElement('a')
-    link.download = `cinco-apartments-bill-${billingData.siteName}-${billingData.doorNumber}-${billingData.billingMonth}-${billingData.billingYear}.png`
-    link.href = canvas.toDataURL()
-    link.click()
-    
-    // Export meter photos as separate image if they exist
-    if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
-      const photosCanvas = await html2canvas(meterPhotosRef.current, {
+    try {
+      if (!receiptRef.current) {
+        console.error('Receipt ref is null')
+        showToast('error', 'Receipt element not found')
+        return
+      }
+      
+      console.log('Starting image export...')
+      
+      const canvas = await html2canvas(receiptRef.current, {
         scale: 2,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        logging: true
       })
       
-      const photosLink = document.createElement('a')
-      photosLink.download = `cinco-apartments-meter-photos-${billingData.siteName}-${billingData.doorNumber}-${billingData.billingMonth}-${billingData.billingYear}.png`
-      photosLink.href = photosCanvas.toDataURL()
-      photosLink.click()
+      console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
+      
+      const fileName = `cinco-apartments-bill-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.png`
+      
+      const link = document.createElement('a')
+      link.download = fileName
+      link.href = canvas.toDataURL()
+      link.click()
+      
+      // Export meter photos as separate image if they exist
+      if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
+        console.log('Exporting meter photos as separate image...')
+        const photosCanvas = await html2canvas(meterPhotosRef.current, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: true
+        })
+        
+        const photosFileName = `cinco-apartments-meter-photos-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.png`
+        const photosLink = document.createElement('a')
+        photosLink.download = photosFileName
+        photosLink.href = photosCanvas.toDataURL()
+        photosLink.click()
+      }
+      
+      showToast('success', 'Image exported successfully!')
+    } catch (error) {
+      console.error('Image export error:', error)
+      showToast('error', 'Failed to export image: ' + (error as Error).message)
     }
-    
-    showToast('success', 'Image exported successfully!')
   }
 
   // Sample analytics data

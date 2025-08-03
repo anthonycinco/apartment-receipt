@@ -252,7 +252,12 @@ export default function BillingForm({
                 />
                 <label htmlFor="electricity-photo" className="cursor-pointer">
                   <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Upload Photo</p>
+                  <p className="text-sm text-gray-600">
+                    {billingData.electricityPhoto ? 'Photo Uploaded ✓' : 'Upload Photo'}
+                  </p>
+                  {billingData.electricityPhoto && (
+                    <p className="text-xs text-green-600 mt-1">Click to change</p>
+                  )}
                 </label>
               </div>
             </div>
@@ -347,7 +352,12 @@ export default function BillingForm({
                 />
                 <label htmlFor="water-photo" className="cursor-pointer">
                   <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Upload Photo</p>
+                  <p className="text-sm text-gray-600">
+                    {billingData.waterPhoto ? 'Photo Uploaded ✓' : 'Upload Photo'}
+                  </p>
+                  {billingData.waterPhoto && (
+                    <p className="text-xs text-green-600 mt-1">Click to change</p>
+                  )}
                 </label>
               </div>
             </div>
@@ -370,6 +380,15 @@ export default function BillingForm({
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Parking Fee (₱)</label>
+              <input
+                type="number"
+                value={billingData.parkingFee}
+                onChange={(e) => updateBillingData('parkingFee', parseFloat(e.target.value) || 0)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+              />
+            </div>
             <div className="flex items-center space-x-3">
               <input
                 type="checkbox"
@@ -378,7 +397,6 @@ export default function BillingForm({
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <label className="text-sm font-semibold text-gray-700">Include Parking Fee</label>
-              <span className="text-sm text-gray-600">(₱{billingData.parkingFee})</span>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Damage Description (Optional)</label>

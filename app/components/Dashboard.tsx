@@ -132,20 +132,20 @@ export default function Dashboard({
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             >
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                <option key={year} value={year.toString()}>{year}</option>
+                <option key={year} value={year.toString()} className="bg-white text-gray-900">{year}</option>
               ))}
             </select>
             <select
               value={selectedSite}
               onChange={(e) => setSelectedSite(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             >
-              <option value="all">All Sites</option>
+              <option value="all" className="bg-white text-gray-900">All Sites</option>
               {sites.map(site => (
-                <option key={site.id} value={site.id}>{site.name}</option>
+                <option key={site.id} value={site.id} className="bg-white text-gray-900">{site.name}</option>
               ))}
             </select>
           </div>

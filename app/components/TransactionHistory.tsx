@@ -400,9 +400,9 @@ export default function TransactionHistory({
         </div>
 
         {/* Group Controls */}
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 space-y-3 sm:space-y-0">
           <h3 className="text-lg font-semibold text-gray-900">Transactions by Month</h3>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setBulkMode(!bulkMode)}
               className={`px-3 py-1 text-sm rounded-lg transition-colors ${
@@ -423,6 +423,7 @@ export default function TransactionHistory({
               onClick={collapseAllGroups}
               className="px-3 py-1 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
+              Collapse All
             </button>
           </div>
         </div>
@@ -430,8 +431,8 @@ export default function TransactionHistory({
         {/* Bulk Operations Bar */}
         {bulkMode && (
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
                 <span className="text-sm font-medium text-purple-900">
                   {selectedRecords.size} record{selectedRecords.size !== 1 ? 's' : ''} selected
                 </span>

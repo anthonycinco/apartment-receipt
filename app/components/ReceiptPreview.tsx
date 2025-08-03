@@ -127,18 +127,12 @@ export default function ReceiptPreview({
             </div>
           </div>
 
-          {/* Meter Photos */}
+          {/* Note about meter photos */}
           {(billingData.electricityPhoto || billingData.waterPhoto) && (
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-2">Meter Readings:</h4>
-              <div className="flex space-x-2">
-                {billingData.electricityPhoto && (
-                  <img src={billingData.electricityPhoto} alt="Electricity meter" className="w-16 h-16 object-cover rounded" />
-                )}
-                {billingData.waterPhoto && (
-                  <img src={billingData.waterPhoto} alt="Water meter" className="w-16 h-16 object-cover rounded" />
-                )}
-              </div>
+              <p className="text-sm text-gray-600 text-center">
+                * Meter photos are included on a separate page in the exported PDF/Image
+              </p>
             </div>
           )}
         </div>

@@ -8,6 +8,7 @@ import jsPDF from 'jspdf'
 import BillingForm from './components/BillingForm'
 import ReceiptPreview from './components/ReceiptPreview'
 import ManagementPanel from './components/ManagementPanel'
+import MeterPhotos from './components/MeterPhotos'
 
 interface BillingData {
   siteName: string
@@ -141,6 +142,7 @@ export default function Home() {
   })
 
   const receiptRef = useRef<HTMLDivElement>(null)
+  const meterPhotosRef = useRef<HTMLDivElement>(null)
 
   // Auto-save billing data every 30 seconds
   useEffect(() => {
@@ -332,6 +334,30 @@ export default function Home() {
       heightLeft -= pageHeight
     }
 
+    // Add meter photos page if photos exist
+    if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
+      const photosCanvas = await html2canvas(meterPhotosRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      })
+      
+      const photosImgData = photosCanvas.toDataURL('image/png')
+      const photosImgHeight = (photosCanvas.height * imgWidth) / photosCanvas.width
+      let photosHeightLeft = photosImgHeight
+
+      pdf.addPage()
+      pdf.addImage(photosImgData, 'PNG', 0, 0, imgWidth, photosImgHeight)
+      photosHeightLeft -= pageHeight
+
+      while (photosHeightLeft >= 0) {
+        const position = photosHeightLeft - photosImgHeight
+        pdf.addPage()
+        pdf.addImage(photosImgData, 'PNG', 0, position, imgWidth, photosImgHeight)
+        photosHeightLeft -= pageHeight
+      }
+    }
+
     pdf.save(`cinco-apartments-bill-${billingData.siteName}-${billingData.doorNumber}-${billingData.billingMonth}-${billingData.billingYear}.pdf`)
     showToast('success', 'PDF exported successfully!')
   }
@@ -349,6 +375,21 @@ export default function Home() {
     link.download = `cinco-apartments-bill-${billingData.siteName}-${billingData.doorNumber}-${billingData.billingMonth}-${billingData.billingYear}.png`
     link.href = canvas.toDataURL()
     link.click()
+    
+    // Export meter photos as separate image if they exist
+    if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
+      const photosCanvas = await html2canvas(meterPhotosRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      })
+      
+      const photosLink = document.createElement('a')
+      photosLink.download = `cinco-apartments-meter-photos-${billingData.siteName}-${billingData.doorNumber}-${billingData.billingMonth}-${billingData.billingYear}.png`
+      photosLink.href = photosCanvas.toDataURL()
+      photosLink.click()
+    }
+    
     showToast('success', 'Image exported successfully!')
   }
 
@@ -483,6 +524,13 @@ export default function Home() {
               parkingTotal={parkingTotal}
               grandTotal={grandTotal}
             />
+            {/* Hidden meter photos component for PDF/image export */}
+            <div className="hidden">
+              <MeterPhotos
+                photosRef={meterPhotosRef}
+                billingData={billingData}
+              />
+            </div>
           </div>
         ) : (
           <ManagementPanel

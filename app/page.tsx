@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Home as HomeIcon, FileText, Settings, History, Plus, Save, Download, Image as ImageIcon, AlertTriangle } from 'lucide-react'
+import { Home as HomeIcon, FileText, Settings, History, Plus, Save, Download, Image as ImageIcon, AlertTriangle, Users } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import BillingForm from './components/BillingForm'
@@ -9,6 +9,7 @@ import ReceiptPreview from './components/ReceiptPreview'
 import ManagementPanel from './components/ManagementPanel'
 import TransactionHistory from './components/TransactionHistory'
 import MeterPhotos from './components/MeterPhotos'
+import SharedStorage, { Site, Tenant, BillingRecord } from './lib/sharedStorage'
 
 interface BillingData {
   siteName: string
@@ -35,37 +36,6 @@ interface BillingData {
   damageDescription: string
   otherFeeDescription: string
   otherFeeAmount: number
-}
-
-interface Site {
-  id: string
-  name: string
-  address: string
-  totalUnits: number
-}
-
-interface Tenant {
-  id: string
-  name: string
-  siteId: string
-  doorNumber: string
-  phone: string
-  email: string
-  baseRent: number
-  status: 'active' | 'inactive'
-}
-
-interface BillingRecord {
-  id: string
-  tenantId: string
-  siteId: string
-  month: string
-  year: string
-  electricityConsumption: number
-  waterConsumption: number
-  totalAmount: number
-  date: string
-  billingData?: BillingData // Full billing data for the record
 }
 
 const months = [
@@ -102,13 +72,19 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'billing' | 'management' | 'history'>('billing')
   
-  // Management state with persistence
-  const [sites, setSites] = useState<Site[]>(() => loadFromLocalStorage('sites', []))
-  const [tenants, setTenants] = useState<Tenant[]>(() => loadFromLocalStorage('tenants', []))
-  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>(() => loadFromLocalStorage('billingRecords', []))
+  // Shared storage instance
+  const sharedStorage = SharedStorage.getInstance()
+  
+  // Management state with shared storage
+  const [sites, setSites] = useState<Site[]>(() => sharedStorage.getSites())
+  const [tenants, setTenants] = useState<Tenant[]>(() => sharedStorage.getTenants())
+  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>(() => sharedStorage.getBillingRecords())
   
   // Toast notification state
   const [toast, setToast] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  
+  // Sync state for shared data
+  const [lastSync, setLastSync] = useState<string>('')
   
   const [billingData, setBillingData] = useState<BillingData>(() => {
     const saved = loadFromLocalStorage('billingData', null)
@@ -153,17 +129,33 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [billingData])
 
+  // Sync shared data every 5 seconds
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      const sharedData = localStorage.getItem('sharedData')
+      if (sharedData) {
+        const parsed = JSON.parse(sharedData)
+        setSites(parsed.sites || [])
+        setTenants(parsed.tenants || [])
+        setBillingRecords(parsed.billingRecords || [])
+        setLastSync(parsed.lastUpdated || '')
+      }
+    }, 5000)
+
+    return () => clearInterval(syncInterval)
+  }, [])
+
   // Save management data when it changes
   useEffect(() => {
-    saveToLocalStorage('sites', sites)
+    sharedStorage.saveSites(sites)
   }, [sites])
 
   useEffect(() => {
-    saveToLocalStorage('tenants', tenants)
+    sharedStorage.saveTenants(tenants)
   }, [tenants])
 
   useEffect(() => {
-    saveToLocalStorage('billingRecords', billingRecords)
+    sharedStorage.saveBillingRecords(billingRecords)
   }, [billingRecords])
 
   const updateBillingData = (field: keyof BillingData, value: any) => {
@@ -476,15 +468,28 @@ export default function Home() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Cinco Apartments</h1>
                 <p className="text-sm text-gray-600">Billing Management System</p>
+                {lastSync && (
+                  <p className="text-xs text-green-600 flex items-center">
+                    <Users className="w-3 h-3 mr-1" />
+                    Shared Data • Last sync: {new Date(lastSync).toLocaleTimeString()}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => saveBillingRecord()}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={exportAsImage}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
-                <Save className="w-4 h-4 mr-2" />
-                Save Receipt
+                <ImageIcon className="w-4 h-4 mr-2" />
+                Export Image
+              </button>
+              <button
+                onClick={exportAsPDF}
+                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
               </button>
             </div>
           </div>

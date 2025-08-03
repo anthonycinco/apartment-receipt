@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calculator, Zap, Droplets, Home, User, Calendar, CreditCard, Upload, Camera, AlertTriangle } from 'lucide-react'
+import { Calculator, Zap, Droplets, Home, User, Calendar, CreditCard, AlertTriangle } from 'lucide-react'
 
 interface Site {
   id: string
@@ -30,7 +30,6 @@ interface BillingData {
   electricityPrevious: number
   electricityCurrent: number
   electricityPricePerKwh: number
-  electricityPhoto: string | null
   waterPrevious: number
   waterCurrent: number
   waterRates: {
@@ -39,7 +38,6 @@ interface BillingData {
     next10_2: number
     above30: number
   }
-  waterPhoto: string | null
   baseRent: number
   parkingFee: number
   parkingEnabled: boolean
@@ -52,8 +50,6 @@ interface BillingFormProps {
   billingData: BillingData
   updateBillingData: (field: keyof BillingData, value: any) => void
   updateWaterRates: (field: keyof BillingData['waterRates'], value: number) => void
-  handlePhotoUpload: (type: 'electricity' | 'water', file: File) => void
-  removePhoto: (type: 'electricity' | 'water') => void
   electricityConsumption: number
   electricityTotal: number
   waterConsumption: number
@@ -73,8 +69,6 @@ export default function BillingForm({
   billingData,
   updateBillingData,
   updateWaterRates,
-  handlePhotoUpload,
-  removePhoto,
   electricityConsumption,
   electricityTotal,
   waterConsumption,
@@ -241,46 +235,6 @@ export default function BillingForm({
                 <span className="text-lg font-bold text-green-600">₱{electricityTotal.toFixed(2)}</span>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Meter Photo</label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      handlePhotoUpload('electricity', file)
-                      // Reset the input so the same file can be selected again
-                      e.target.value = ''
-                    }
-                  }}
-                  className="hidden"
-                  id="electricity-photo"
-                />
-                <label htmlFor="electricity-photo" className="cursor-pointer">
-                  <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
-                    {billingData.electricityPhoto ? 'Photo Uploaded ✓' : 'Upload Photo'}
-                  </p>
-                  {billingData.electricityPhoto && (
-                    <p className="text-xs text-green-600 mt-1">Click to change</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
-                </label>
-                
-                {/* Remove Photo Button */}
-                {billingData.electricityPhoto && (
-                  <button
-                    type="button"
-                    onClick={() => removePhoto('electricity')}
-                    className="mt-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-                  >
-                    Remove Photo
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -355,46 +309,6 @@ export default function BillingForm({
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">Total Water Bill (₱)</span>
                 <span className="text-lg font-bold text-green-600">₱{waterTotal.toFixed(2)}</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Meter Photo</label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      handlePhotoUpload('water', file)
-                      // Reset the input so the same file can be selected again
-                      e.target.value = ''
-                    }
-                  }}
-                  className="hidden"
-                  id="water-photo"
-                />
-                <label htmlFor="water-photo" className="cursor-pointer">
-                  <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">
-                    {billingData.waterPhoto ? 'Photo Uploaded ✓' : 'Upload Photo'}
-                  </p>
-                  {billingData.waterPhoto && (
-                    <p className="text-xs text-green-600 mt-1">Click to change</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
-                </label>
-                
-                {/* Remove Photo Button */}
-                {billingData.waterPhoto && (
-                  <button
-                    type="button"
-                    onClick={() => removePhoto('water')}
-                    className="mt-3 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-                  >
-                    Remove Photo
-                  </button>
-                )}
               </div>
             </div>
           </div>

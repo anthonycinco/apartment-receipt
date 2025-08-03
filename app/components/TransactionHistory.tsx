@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { FileText, Image as ImageIcon, Eye, Calendar, Download, Search, Filter, ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Download, FileText, ImageIcon, Eye, X } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import ReceiptPreview from './ReceiptPreview'
-import MeterPhotos from './MeterPhotos'
 
 interface BillingData {
   siteName: string
@@ -16,7 +15,6 @@ interface BillingData {
   electricityPrevious: number
   electricityCurrent: number
   electricityPricePerKwh: number
-  electricityPhoto: string | null
   waterPrevious: number
   waterCurrent: number
   waterRates: {
@@ -25,7 +23,6 @@ interface BillingData {
     next10_2: number
     above30: number
   }
-  waterPhoto: string | null
   baseRent: number
   parkingFee: number
   parkingEnabled: boolean
@@ -99,7 +96,6 @@ export default function TransactionHistory({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   
   const receiptRef = useRef<HTMLDivElement>(null)
-  const meterPhotosRef = useRef<HTMLDivElement>(null)
 
   // Filter records based on selections
   const filteredRecords = billingRecords.filter(record => {
@@ -217,40 +213,6 @@ export default function TransactionHistory({
       
       // Add receipt to PDF
       pdf.addImage(receiptImgData, 'JPEG', 10, 10, receiptWidth, receiptHeight)
-      
-      // Add meter photos page if photos exist
-      if (selectedRecord.billingData && 
-          (selectedRecord.billingData.electricityPhoto || selectedRecord.billingData.waterPhoto) && 
-          meterPhotosRef.current) {
-        console.log('Adding meter photos page...')
-        
-        // Wait a bit for meter photos to render
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        const photosCanvas = await html2canvas(meterPhotosRef.current, {
-          scale: 1.2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          imageTimeout: 15000,
-          removeContainer: true
-        })
-        
-        console.log('Photos canvas created, dimensions:', photosCanvas.width, 'x', photosCanvas.height)
-        
-        // Calculate dimensions for photos
-        const photosAspectRatio = photosCanvas.width / photosCanvas.height
-        const photosWidth = pageWidth - 20
-        const photosHeight = photosWidth / photosAspectRatio
-        
-        // Convert photos canvas to image
-        const photosImgData = photosCanvas.toDataURL('image/jpeg', 0.8)
-        
-        // Add new page for photos
-        pdf.addPage()
-        pdf.addImage(photosImgData, 'JPEG', 10, 10, photosWidth, photosHeight)
-      }
 
       const tenant = getTenantById(selectedRecord.tenantId)
       const site = getSiteById(selectedRecord.siteId)
@@ -293,32 +255,6 @@ export default function TransactionHistory({
       link.download = fileName
       link.href = canvas.toDataURL('image/png', 1.0)
       link.click()
-      
-      // Export meter photos as separate image if they exist
-      if (selectedRecord.billingData && 
-          (selectedRecord.billingData.electricityPhoto || selectedRecord.billingData.waterPhoto) && 
-          meterPhotosRef.current) {
-        console.log('Exporting meter photos as separate image...')
-        
-        // Wait a bit for meter photos to render
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        const photosCanvas = await html2canvas(meterPhotosRef.current, {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          imageTimeout: 15000,
-          removeContainer: true
-        })
-        
-        const photosFileName = `cinco-apartments-meter-photos-${site?.name || 'unknown'}-${tenant?.doorNumber || 'unknown'}-${selectedRecord.month}-${selectedRecord.year}.png`
-        const photosLink = document.createElement('a')
-        photosLink.download = photosFileName
-        photosLink.href = photosCanvas.toDataURL('image/png', 1.0)
-        photosLink.click()
-      }
     } catch (error) {
       console.error('Image export error:', error)
       alert('Failed to export image: ' + (error as Error).message)
@@ -339,7 +275,6 @@ export default function TransactionHistory({
       electricityPrevious: 0, // We don't store these in records
       electricityCurrent: record.electricityConsumption,
       electricityPricePerKwh: 12.5, // Default value
-      electricityPhoto: record.billingData?.electricityPhoto || null,
       waterPrevious: 0, // We don't store these in records
       waterCurrent: record.waterConsumption,
       waterRates: {
@@ -348,7 +283,6 @@ export default function TransactionHistory({
         next10_2: 30,
         above30: 35
       },
-      waterPhoto: record.billingData?.waterPhoto || null,
       baseRent: tenant?.baseRent || 0,
       parkingFee: 500,
       parkingEnabled: false,
@@ -438,7 +372,7 @@ export default function TransactionHistory({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-blue-50 rounded-lg p-4">
             <div className="flex items-center">
-              <Calendar className="w-5 h-5 text-blue-600 mr-2" />
+              <Eye className="w-5 h-5 text-blue-600 mr-2" />
               <span className="text-sm font-medium text-blue-900">Total Records</span>
             </div>
             <p className="text-2xl font-bold text-blue-900">{filteredRecords.length}</p>
@@ -646,13 +580,6 @@ export default function TransactionHistory({
                   parkingTotal={0}
                   grandTotal={selectedRecord.totalAmount}
                 />
-                {/* Hidden meter photos component for PDF/image export */}
-                <div className="hidden">
-                  <MeterPhotos
-                    photosRef={meterPhotosRef}
-                    billingData={getBillingDataForRecord(selectedRecord)}
-                  />
-                </div>
               </div>
             </div>
           </div>

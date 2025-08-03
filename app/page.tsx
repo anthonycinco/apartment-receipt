@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Home as HomeIcon, FileText, Settings, History, Plus, Save, Download, Image as ImageIcon, AlertTriangle, Users } from 'lucide-react'
+import { Home as HomeIcon, FileText, ImageIcon, Users, AlertTriangle } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import BillingForm from './components/BillingForm'
 import ReceiptPreview from './components/ReceiptPreview'
 import ManagementPanel from './components/ManagementPanel'
 import TransactionHistory from './components/TransactionHistory'
-import MeterPhotos from './components/MeterPhotos'
 import SharedStorage, { Site, Tenant, BillingRecord } from './lib/sharedStorage'
 
 interface BillingData {
@@ -20,7 +19,6 @@ interface BillingData {
   electricityPrevious: number
   electricityCurrent: number
   electricityPricePerKwh: number
-  electricityPhoto: string | null
   waterPrevious: number
   waterCurrent: number
   waterRates: {
@@ -29,7 +27,6 @@ interface BillingData {
     next10_2: number
     above30: number
   }
-  waterPhoto: string | null
   baseRent: number
   parkingFee: number
   parkingEnabled: boolean
@@ -99,7 +96,6 @@ export default function Home() {
       electricityPrevious: 0,
       electricityCurrent: 0,
       electricityPricePerKwh: 12.5,
-      electricityPhoto: null,
       waterPrevious: 0,
       waterCurrent: 0,
       waterRates: {
@@ -108,7 +104,6 @@ export default function Home() {
         next10_2: 30,
         above30: 35
       },
-      waterPhoto: null,
       baseRent: 0,
       parkingFee: 500,
       parkingEnabled: false,
@@ -119,7 +114,6 @@ export default function Home() {
   })
 
   const receiptRef = useRef<HTMLDivElement>(null)
-  const meterPhotosRef = useRef<HTMLDivElement>(null)
 
   // Auto-save billing data every 30 seconds
   useEffect(() => {
@@ -289,53 +283,6 @@ export default function Home() {
   const parkingTotal = billingData.parkingEnabled ? billingData.parkingFee : 0
   const grandTotal = billingData.baseRent + electricityTotal + waterTotal + parkingTotal + billingData.otherFeeAmount
 
-  // File upload handlers
-  const handlePhotoUpload = (type: 'electricity' | 'water', file: File) => {
-    try {
-      console.log(`Uploading ${type} photo:`, file.name, file.size, 'bytes')
-      
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        showToast('error', 'Please select an image file')
-        return
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('error', 'Image file is too large. Please select a file under 5MB')
-        return
-      }
-      
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        try {
-          const photoData = e.target?.result as string
-          console.log(`${type} photo uploaded successfully, data length:`, photoData.length)
-          
-          // Validate the data URL
-          if (!photoData.startsWith('data:image/')) {
-            showToast('error', 'Invalid image format')
-            return
-          }
-          
-          updateBillingData(type === 'electricity' ? 'electricityPhoto' : 'waterPhoto', photoData)
-          showToast('success', `${type.charAt(0).toUpperCase() + type.slice(1)} photo uploaded successfully!`)
-        } catch (error) {
-          console.error(`Error processing ${type} photo:`, error)
-          showToast('error', `Failed to process ${type} photo`)
-        }
-      }
-      reader.onerror = (error) => {
-        console.error(`Error reading ${type} photo:`, error)
-        showToast('error', `Failed to upload ${type} photo`)
-      }
-      reader.readAsDataURL(file)
-    } catch (error) {
-      console.error(`Error in handlePhotoUpload for ${type}:`, error)
-      showToast('error', `Failed to upload ${type} photo: ${(error as Error).message}`)
-    }
-  }
-
   // Export functions
   const exportAsPDF = async () => {
     try {
@@ -378,38 +325,6 @@ export default function Home() {
       
       // Add receipt to PDF
       pdf.addImage(receiptImgData, 'JPEG', 10, 10, receiptWidth, receiptHeight)
-      
-      // Add meter photos page if photos exist
-      if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
-        console.log('Adding meter photos page...')
-        
-        // Wait a bit for meter photos to render
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        const photosCanvas = await html2canvas(meterPhotosRef.current, {
-          scale: 1.2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          imageTimeout: 15000,
-          removeContainer: true
-        })
-        
-        console.log('Photos canvas created, dimensions:', photosCanvas.width, 'x', photosCanvas.height)
-        
-        // Calculate dimensions for photos
-        const photosAspectRatio = photosCanvas.width / photosCanvas.height
-        const photosWidth = pageWidth - 20
-        const photosHeight = photosWidth / photosAspectRatio
-        
-        // Convert photos canvas to image
-        const photosImgData = photosCanvas.toDataURL('image/jpeg', 0.8)
-        
-        // Add new page for photos
-        pdf.addPage()
-        pdf.addImage(photosImgData, 'JPEG', 10, 10, photosWidth, photosHeight)
-      }
 
       const fileName = `cinco-apartments-bill-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.pdf`
       console.log('Saving PDF as:', fileName)
@@ -454,30 +369,6 @@ export default function Home() {
       link.href = canvas.toDataURL('image/png', 1.0)
       link.click()
       
-      // Export meter photos as separate image if they exist
-      if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
-        console.log('Exporting meter photos as separate image...')
-        
-        // Wait a bit for meter photos to render
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        const photosCanvas = await html2canvas(meterPhotosRef.current, {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          imageTimeout: 15000,
-          removeContainer: true
-        })
-        
-        const photosFileName = `cinco-apartments-meter-photos-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.png`
-        const photosLink = document.createElement('a')
-        photosLink.download = photosFileName
-        photosLink.href = photosCanvas.toDataURL('image/png', 1.0)
-        photosLink.click()
-      }
-      
       showToast('success', 'Image exported successfully!')
     } catch (error) {
       console.error('Image export error:', error)
@@ -485,15 +376,8 @@ export default function Home() {
     }
   }
 
-  // Remove photo function
-  const removePhoto = (type: 'electricity' | 'water') => {
-    updateBillingData(type === 'electricity' ? 'electricityPhoto' : 'waterPhoto', null)
-    showToast('success', `${type.charAt(0).toUpperCase() + type.slice(1)} photo removed!`)
-  }
-
-  // Clear all fields function
   const clearAllFields = () => {
-    if (window.confirm('Are you sure you want to clear all fields? This will reset the entire form including uploaded photos.')) {
+    if (window.confirm('Are you sure you want to clear all fields? This will reset the entire form.')) {
       setBillingData({
         siteName: '',
         doorNumber: '',
@@ -503,7 +387,6 @@ export default function Home() {
         electricityPrevious: 0,
         electricityCurrent: 0,
         electricityPricePerKwh: 12.5,
-        electricityPhoto: null,
         waterPrevious: 0,
         waterCurrent: 0,
         waterRates: {
@@ -512,7 +395,6 @@ export default function Home() {
           next10_2: 30,
           above30: 35
         },
-        waterPhoto: null,
         baseRent: 0,
         parkingFee: 500,
         parkingEnabled: false,
@@ -615,7 +497,7 @@ export default function Home() {
               }`}
             >
               <div className="flex items-center space-x-2">
-                <Settings className="w-4 h-4" />
+                <Users className="w-4 h-4" />
                 <span>Management</span>
               </div>
             </button>
@@ -628,7 +510,7 @@ export default function Home() {
               }`}
             >
               <div className="flex items-center space-x-2">
-                <History className="w-4 h-4" />
+                <Users className="w-4 h-4" />
                 <span>History</span>
               </div>
             </button>
@@ -679,8 +561,6 @@ export default function Home() {
                 billingData={billingData}
                 updateBillingData={updateBillingData}
                 updateWaterRates={updateWaterRates}
-                handlePhotoUpload={handlePhotoUpload}
-                removePhoto={removePhoto}
                 electricityConsumption={electricityConsumption}
                 electricityTotal={electricityTotal}
                 waterConsumption={waterConsumption}
@@ -711,10 +591,7 @@ export default function Home() {
 
             {/* Hidden Meter Photos for Export */}
             <div className="hidden">
-              <MeterPhotos
-                photosRef={meterPhotosRef}
-                billingData={billingData}
-              />
+              {/* MeterPhotos component was removed, so this div is now empty */}
             </div>
           </div>
         )}
@@ -754,7 +631,7 @@ export default function Home() {
             : 'bg-red-500 text-white'
         }`}>
           {toast.type === 'success' ? (
-            <Save className="w-4 h-4" />
+            <Users className="w-4 h-4" />
           ) : (
             <AlertTriangle className="w-4 h-4" />
           )}

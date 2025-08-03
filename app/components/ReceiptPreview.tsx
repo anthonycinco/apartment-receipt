@@ -12,7 +12,6 @@ interface BillingData {
   electricityPrevious: number
   electricityCurrent: number
   electricityPricePerKwh: number
-  electricityPhoto: string | null
   waterPrevious: number
   waterCurrent: number
   waterRates: {
@@ -21,7 +20,6 @@ interface BillingData {
     next10_2: number
     above30: number
   }
-  waterPhoto: string | null
   baseRent: number
   parkingFee: number
   parkingEnabled: boolean
@@ -106,16 +104,6 @@ export default function ReceiptPreview({
               <p>Consumption: {electricityConsumption} kWh</p>
               <p>Rate: ₱{billingData.electricityPricePerKwh}/kWh</p>
             </div>
-            {billingData.electricityPhoto && (
-              <div className="mt-3">
-                <p className="text-sm text-gray-600 mb-2">Meter Photo:</p>
-                <img 
-                  src={billingData.electricityPhoto} 
-                  alt="Electricity Meter" 
-                  className="w-32 h-24 object-cover rounded border"
-                />
-              </div>
-            )}
           </div>
 
           {/* Water */}
@@ -130,16 +118,6 @@ export default function ReceiptPreview({
               <p>Consumption: {waterConsumption} m³</p>
               <p>Tiered Rate Structure Applied</p>
             </div>
-            {billingData.waterPhoto && (
-              <div className="mt-3">
-                <p className="text-sm text-gray-600 mb-2">Meter Photo:</p>
-                <img 
-                  src={billingData.waterPhoto} 
-                  alt="Water Meter" 
-                  className="w-32 h-24 object-cover rounded border"
-                />
-              </div>
-            )}
           </div>
 
           {/* Parking */}
@@ -183,7 +161,7 @@ export default function ReceiptPreview({
         </div>
 
         {/* Note about meter photos */}
-        {(billingData.electricityPhoto || billingData.waterPhoto) && (
+        {false && (
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
               <strong>Note:</strong> Meter photos are included on a separate page in the exported PDF/Image.

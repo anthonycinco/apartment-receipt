@@ -9,6 +9,7 @@ import BillingForm from './components/BillingForm'
 import ReceiptPreview from './components/ReceiptPreview'
 import ManagementPanel from './components/ManagementPanel'
 import MeterPhotos from './components/MeterPhotos'
+import TransactionHistory from './components/TransactionHistory'
 
 interface BillingData {
   siteName: string
@@ -65,6 +66,7 @@ interface BillingRecord {
   waterConsumption: number
   totalAmount: number
   date: string
+  billingData?: BillingData // Full billing data for the record
 }
 
 const months = [
@@ -99,7 +101,7 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'billing' | 'management'>('billing')
+  const [activeTab, setActiveTab] = useState<'billing' | 'management' | 'history'>('billing')
   
   // Management state with persistence
   const [sites, setSites] = useState<Site[]>(() => loadFromLocalStorage('sites', []))
@@ -251,7 +253,8 @@ export default function Home() {
       electricityConsumption: electricityConsumption,
       waterConsumption: waterConsumption,
       totalAmount: grandTotal,
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      billingData: { ...billingData } // Save full billing data including photos
     }
     
     setBillingRecords(prev => [...prev, newRecord])
@@ -491,6 +494,17 @@ export default function Home() {
               <Building2 className="w-4 h-4 inline mr-2" />
               Management
             </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'history'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <FileText className="w-4 h-4 inline mr-2" />
+              History
+            </button>
           </div>
         </div>
       </header>
@@ -532,7 +546,7 @@ export default function Home() {
               />
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'management' ? (
           <ManagementPanel
             sites={sites}
             tenants={tenants}
@@ -545,6 +559,14 @@ export default function Home() {
             addTenant={addTenant}
             updateTenant={updateTenant}
             deleteTenant={deleteTenant}
+          />
+        ) : (
+          <TransactionHistory
+            billingRecords={billingRecords}
+            sites={sites}
+            tenants={tenants}
+            getSiteById={getSiteById}
+            getTenantById={getTenantById}
           />
         )}
       </div>

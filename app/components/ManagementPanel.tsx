@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Building2, Users, BarChart3 } from 'lucide-react'
+import { Building2, Users, BarChart3, Search, Filter } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface Site {
@@ -66,6 +66,10 @@ export default function ManagementPanel({
   const [selectedSite, setSelectedSite] = useState<string>('all')
   const [selectedTenant, setSelectedTenant] = useState<string>('all')
   
+  // Search states
+  const [siteSearchTerm, setSiteSearchTerm] = useState('')
+  const [tenantSearchTerm, setTenantSearchTerm] = useState('')
+  
   // Edit states
   const [editingSite, setEditingSite] = useState<Site | null>(null)
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
@@ -89,6 +93,22 @@ export default function ManagementPanel({
     moveInDate: '',
     baseRent: 0,
     status: 'active' as 'active' | 'inactive'
+  })
+
+  // Filtered data
+  const filteredSites = sites.filter(site => 
+    site.name.toLowerCase().includes(siteSearchTerm.toLowerCase()) ||
+    site.address.toLowerCase().includes(siteSearchTerm.toLowerCase())
+  )
+
+  const filteredTenants = tenants.filter(tenant => {
+    const site = getSiteById(tenant.siteId)
+    const matchesSearch = tenant.name.toLowerCase().includes(tenantSearchTerm.toLowerCase()) ||
+                         tenant.unit.toLowerCase().includes(tenantSearchTerm.toLowerCase()) ||
+                         tenant.phone.includes(tenantSearchTerm) ||
+                         tenant.email.toLowerCase().includes(tenantSearchTerm.toLowerCase())
+    const matchesSite = selectedSite === 'all' || tenant.siteId === selectedSite
+    return matchesSearch && matchesSite
   })
 
   // Filter records based on selection
@@ -202,6 +222,21 @@ export default function ManagementPanel({
             Add Site
           </button>
         </div>
+
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search sites by name or address..."
+              value={siteSearchTerm}
+              onChange={(e) => setSiteSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -214,28 +249,36 @@ export default function ManagementPanel({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sites.map(site => (
-                <tr key={site.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{site.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.address}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.totalUnits}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.occupiedUnits}</td>
-                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                     <button 
-                       onClick={() => openSiteModal(site)}
-                       className="text-blue-600 hover:text-blue-900 mr-3"
-                     >
-                       Edit
-                     </button>
-                     <button 
-                       onClick={() => deleteSite(site.id)}
-                       className="text-red-600 hover:text-red-900"
-                     >
-                       Delete
-                     </button>
-                   </td>
+              {filteredSites.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                    {siteSearchTerm ? 'No sites found matching your search.' : 'No sites added yet.'}
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                filteredSites.map(site => (
+                  <tr key={site.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{site.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.address}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.totalUnits}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.occupiedUnits}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button 
+                        onClick={() => openSiteModal(site)}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => deleteSite(site.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -255,6 +298,34 @@ export default function ManagementPanel({
             Add Tenant
           </button>
         </div>
+
+        {/* Search and Filter */}
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search tenants by name, unit, phone, or email..."
+              value={tenantSearchTerm}
+              onChange={(e) => setTenantSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <select
+              value={selectedSite}
+              onChange={(e) => setSelectedSite(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="all">All Sites</option>
+              {sites.map(site => (
+                <option key={site.id} value={site.id}>{site.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -269,41 +340,51 @@ export default function ManagementPanel({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {tenants.map(tenant => {
-                const site = getSiteById(tenant.siteId)
-                return (
-                  <tr key={tenant.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tenant.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site?.name || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tenant.unit}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tenant.phone}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₱{tenant.baseRent.toLocaleString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        tenant.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {tenant.status}
-                      </span>
-                    </td>
-                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                       <button 
-                         onClick={() => openTenantModal(tenant)}
-                         className="text-blue-600 hover:text-blue-900 mr-3"
-                       >
-                         Edit
-                       </button>
-                       <button 
-                         onClick={() => deleteTenant(tenant.id)}
-                         className="text-red-600 hover:text-red-900"
-                       >
-                         Delete
-                       </button>
-                     </td>
-                  </tr>
-                )
-              })}
+              {filteredTenants.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    {tenantSearchTerm || selectedSite !== 'all' 
+                      ? 'No tenants found matching your search/filter.' 
+                      : 'No tenants added yet.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredTenants.map(tenant => {
+                  const site = getSiteById(tenant.siteId)
+                  return (
+                    <tr key={tenant.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tenant.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site?.name || 'N/A'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tenant.unit}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tenant.phone}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₱{tenant.baseRent.toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          tenant.status === 'active' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {tenant.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button 
+                          onClick={() => openTenantModal(tenant)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => deleteTenant(tenant.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -412,192 +493,192 @@ export default function ManagementPanel({
                 })}
             </div>
           </div>
-                 </div>
-       </div>
+        </div>
+      </div>
 
-       {/* Site Modal */}
-       {showSiteModal && (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-             <h3 className="text-lg font-semibold mb-4">
-               {editingSite ? 'Edit Site' : 'Add Site'}
-             </h3>
-             <form onSubmit={handleSiteSubmit} className="space-y-4">
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
-                 <input
-                   type="text"
-                   value={siteForm.name}
-                   onChange={(e) => setSiteForm(prev => ({ ...prev, name: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 />
-               </div>
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                 <input
-                   type="text"
-                   value={siteForm.address}
-                   onChange={(e) => setSiteForm(prev => ({ ...prev, address: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 />
-               </div>
-               <div className="grid grid-cols-2 gap-4">
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Total Units</label>
-                   <input
-                     type="number"
-                     value={siteForm.totalUnits}
-                     onChange={(e) => setSiteForm(prev => ({ ...prev, totalUnits: parseInt(e.target.value) || 0 }))}
-                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                     required
-                   />
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Occupied Units</label>
-                   <input
-                     type="number"
-                     value={siteForm.occupiedUnits}
-                     onChange={(e) => setSiteForm(prev => ({ ...prev, occupiedUnits: parseInt(e.target.value) || 0 }))}
-                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                     required
-                   />
-                 </div>
-               </div>
-               <div className="flex space-x-3 pt-4">
-                 <button
-                   type="submit"
-                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                 >
-                   {editingSite ? 'Update' : 'Add'}
-                 </button>
-                 <button
-                   type="button"
-                   onClick={() => setShowSiteModal(false)}
-                   className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-                 >
-                   Cancel
-                 </button>
-               </div>
-             </form>
-           </div>
-         </div>
-       )}
+      {/* Site Modal */}
+      {showSiteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              {editingSite ? 'Edit Site' : 'Add Site'}
+            </h3>
+            <form onSubmit={handleSiteSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
+                <input
+                  type="text"
+                  value={siteForm.name}
+                  onChange={(e) => setSiteForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <input
+                  type="text"
+                  value={siteForm.address}
+                  onChange={(e) => setSiteForm(prev => ({ ...prev, address: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Units</label>
+                  <input
+                    type="number"
+                    value={siteForm.totalUnits}
+                    onChange={(e) => setSiteForm(prev => ({ ...prev, totalUnits: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Occupied Units</label>
+                  <input
+                    type="number"
+                    value={siteForm.occupiedUnits}
+                    onChange={(e) => setSiteForm(prev => ({ ...prev, occupiedUnits: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {editingSite ? 'Update' : 'Add'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSiteModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-       {/* Tenant Modal */}
-       {showTenantModal && (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-             <h3 className="text-lg font-semibold mb-4">
-               {editingTenant ? 'Edit Tenant' : 'Add Tenant'}
-             </h3>
-             <form onSubmit={handleTenantSubmit} className="space-y-4">
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                 <input
-                   type="text"
-                   value={tenantForm.name}
-                   onChange={(e) => setTenantForm(prev => ({ ...prev, name: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 />
-               </div>
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
-                 <select
-                   value={tenantForm.siteId}
-                   onChange={(e) => setTenantForm(prev => ({ ...prev, siteId: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 >
-                   <option value="">Select a site</option>
-                   {sites.map(site => (
-                     <option key={site.id} value={site.id}>{site.name}</option>
-                   ))}
-                 </select>
-               </div>
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                 <input
-                   type="text"
-                   value={tenantForm.unit}
-                   onChange={(e) => setTenantForm(prev => ({ ...prev, unit: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 />
-               </div>
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                 <input
-                   type="tel"
-                   value={tenantForm.phone}
-                   onChange={(e) => setTenantForm(prev => ({ ...prev, phone: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 />
-               </div>
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                 <input
-                   type="email"
-                   value={tenantForm.email}
-                   onChange={(e) => setTenantForm(prev => ({ ...prev, email: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 />
-               </div>
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Move-in Date</label>
-                 <input
-                   type="date"
-                   value={tenantForm.moveInDate}
-                   onChange={(e) => setTenantForm(prev => ({ ...prev, moveInDate: e.target.value }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 />
-               </div>
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Base Rent (₱)</label>
-                 <input
-                   type="number"
-                   value={tenantForm.baseRent}
-                   onChange={(e) => setTenantForm(prev => ({ ...prev, baseRent: parseFloat(e.target.value) || 0 }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 />
-               </div>
-               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                 <select
-                   value={tenantForm.status}
-                   onChange={(e) => setTenantForm(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
-                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                   required
-                 >
-                   <option value="active">Active</option>
-                   <option value="inactive">Inactive</option>
-                 </select>
-               </div>
-               <div className="flex space-x-3 pt-4">
-                 <button
-                   type="submit"
-                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                 >
-                   {editingTenant ? 'Update' : 'Add'}
-                 </button>
-                 <button
-                   type="button"
-                   onClick={() => setShowTenantModal(false)}
-                   className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-                 >
-                   Cancel
-                 </button>
-               </div>
-             </form>
-           </div>
-         </div>
-       )}
-     </div>
-   )
- } 
+      {/* Tenant Modal */}
+      {showTenantModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              {editingTenant ? 'Edit Tenant' : 'Add Tenant'}
+            </h3>
+            <form onSubmit={handleTenantSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={tenantForm.name}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
+                <select
+                  value={tenantForm.siteId}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, siteId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                >
+                  <option value="">Select a site</option>
+                  {sites.map(site => (
+                    <option key={site.id} value={site.id}>{site.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                <input
+                  type="text"
+                  value={tenantForm.unit}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, unit: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={tenantForm.phone}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={tenantForm.email}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Move-in Date</label>
+                <input
+                  type="date"
+                  value={tenantForm.moveInDate}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, moveInDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Base Rent (₱)</label>
+                <input
+                  type="number"
+                  value={tenantForm.baseRent}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, baseRent: parseFloat(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={tenantForm.status}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  required
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {editingTenant ? 'Update' : 'Add'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTenantModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+} 

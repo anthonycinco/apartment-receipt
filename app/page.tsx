@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { FileText, Image as ImageIcon, Calculator, Building2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { FileText, Image as ImageIcon, Calculator, Building2, Save, AlertTriangle } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -75,42 +75,95 @@ const months = [
 
 const years = Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - 2 + i).toString())
 
+// Data persistence utilities
+const saveToLocalStorage = (key: string, data: any) => {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify(data))
+    }
+  } catch (error) {
+    console.error('Failed to save to localStorage:', error)
+  }
+}
+
+const loadFromLocalStorage = (key: string, defaultValue: any) => {
+  try {
+    if (typeof window !== 'undefined') {
+      const data = localStorage.getItem(key)
+      return data ? JSON.parse(data) : defaultValue
+    }
+    return defaultValue
+  } catch (error) {
+    console.error('Failed to load from localStorage:', error)
+    return defaultValue
+  }
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'billing' | 'management'>('billing')
   
-  // Management state
-  const [sites, setSites] = useState<Site[]>([])
-  const [tenants, setTenants] = useState<Tenant[]>([])
-  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([])
+  // Management state with persistence
+  const [sites, setSites] = useState<Site[]>(() => loadFromLocalStorage('sites', []))
+  const [tenants, setTenants] = useState<Tenant[]>(() => loadFromLocalStorage('tenants', []))
+  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>(() => loadFromLocalStorage('billingRecords', []))
   
-  const [billingData, setBillingData] = useState<BillingData>({
-    siteName: '',
-    unit: '',
-    tenantName: '',
-    billingMonth: months[new Date().getMonth()],
-    billingYear: new Date().getFullYear().toString(),
-    electricityPrevious: 0,
-    electricityCurrent: 0,
-    electricityPricePerKwh: 12.5,
-    electricityPhoto: null,
-    waterPrevious: 0,
-    waterCurrent: 0,
-    waterRates: {
-      first10: 150,
-      next10: 25,
-      next10_2: 30,
-      above30: 35
-    },
-    waterPhoto: null,
-    baseRent: 0,
-    parkingFee: 500,
-    parkingEnabled: false,
-    damageDescription: '',
-    otherFeeDescription: '',
-    otherFeeAmount: 0
+  // Toast notification state
+  const [toast, setToast] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  
+  const [billingData, setBillingData] = useState<BillingData>(() => {
+    const saved = loadFromLocalStorage('billingData', null)
+    if (saved) return saved
+    
+    return {
+      siteName: '',
+      unit: '',
+      tenantName: '',
+      billingMonth: months[new Date().getMonth()],
+      billingYear: new Date().getFullYear().toString(),
+      electricityPrevious: 0,
+      electricityCurrent: 0,
+      electricityPricePerKwh: 12.5,
+      electricityPhoto: null,
+      waterPrevious: 0,
+      waterCurrent: 0,
+      waterRates: {
+        first10: 150,
+        next10: 25,
+        next10_2: 30,
+        above30: 35
+      },
+      waterPhoto: null,
+      baseRent: 0,
+      parkingFee: 500,
+      parkingEnabled: false,
+      damageDescription: '',
+      otherFeeDescription: '',
+      otherFeeAmount: 0
+    }
   })
 
   const receiptRef = useRef<HTMLDivElement>(null)
+
+  // Auto-save billing data every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      saveToLocalStorage('billingData', billingData)
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [billingData])
+
+  // Save management data when it changes
+  useEffect(() => {
+    saveToLocalStorage('sites', sites)
+  }, [sites])
+
+  useEffect(() => {
+    saveToLocalStorage('tenants', tenants)
+  }, [tenants])
+
+  useEffect(() => {
+    saveToLocalStorage('billingRecords', billingRecords)
+  }, [billingRecords])
 
   const updateBillingData = (field: keyof BillingData, value: any) => {
     setBillingData(prev => ({ ...prev, [field]: value }))
@@ -123,35 +176,87 @@ export default function Home() {
     }))
   }
 
-  // Management functions
+  // Toast notification utility
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  // Management functions with confirmation dialogs
   const addSite = (site: Omit<Site, 'id'>) => {
     const newSite = { ...site, id: Date.now().toString() }
     setSites(prev => [...prev, newSite])
+    showToast('success', 'Site added successfully!')
   }
 
   const updateSite = (id: string, updates: Partial<Site>) => {
     setSites(prev => prev.map(site => site.id === id ? { ...site, ...updates } : site))
+    showToast('success', 'Site updated successfully!')
   }
 
   const deleteSite = (id: string) => {
-    setSites(prev => prev.filter(site => site.id !== id))
+    // Check if site has tenants
+    const siteTenants = tenants.filter(tenant => tenant.siteId === id)
+    if (siteTenants.length > 0) {
+      if (window.confirm(`This site has ${siteTenants.length} tenant(s). Deleting it will also remove all associated tenants. Are you sure?`)) {
+        setSites(prev => prev.filter(site => site.id !== id))
+        setTenants(prev => prev.filter(tenant => tenant.siteId !== id))
+        showToast('success', 'Site and associated tenants deleted successfully!')
+      }
+    } else {
+      if (window.confirm('Are you sure you want to delete this site?')) {
+        setSites(prev => prev.filter(site => site.id !== id))
+        showToast('success', 'Site deleted successfully!')
+      }
+    }
   }
 
   const addTenant = (tenant: Omit<Tenant, 'id'>) => {
     const newTenant = { ...tenant, id: Date.now().toString() }
     setTenants(prev => [...prev, newTenant])
+    showToast('success', 'Tenant added successfully!')
   }
 
   const updateTenant = (id: string, updates: Partial<Tenant>) => {
     setTenants(prev => prev.map(tenant => tenant.id === id ? { ...tenant, ...updates } : tenant))
+    showToast('success', 'Tenant updated successfully!')
   }
 
   const deleteTenant = (id: string) => {
-    setTenants(prev => prev.filter(tenant => tenant.id !== id))
+    if (window.confirm('Are you sure you want to delete this tenant?')) {
+      setTenants(prev => prev.filter(tenant => tenant.id !== id))
+      showToast('success', 'Tenant deleted successfully!')
+    }
   }
 
   const getSiteById = (id: string) => sites.find(site => site.id === id)
   const getTenantById = (id: string) => tenants.find(tenant => tenant.id === id)
+
+  // Save billing record to history
+  const saveBillingRecord = () => {
+    const tenant = tenants.find(t => t.name === billingData.tenantName)
+    const site = sites.find(s => s.name === billingData.siteName)
+    
+    if (!tenant || !site) {
+      showToast('error', 'Please select a valid tenant and site')
+      return
+    }
+
+    const newRecord: BillingRecord = {
+      id: Date.now().toString(),
+      tenantId: tenant.id,
+      siteId: site.id,
+      month: billingData.billingMonth,
+      year: billingData.billingYear,
+      electricityConsumption: electricityConsumption,
+      waterConsumption: waterConsumption,
+      totalAmount: grandTotal,
+      date: new Date().toISOString()
+    }
+    
+    setBillingRecords(prev => [...prev, newRecord])
+    showToast('success', 'Billing record saved to history!')
+  }
 
   // Calculations
   const electricityConsumption = billingData.electricityCurrent - billingData.electricityPrevious
@@ -230,6 +335,7 @@ export default function Home() {
     }
 
     pdf.save(`cinco-apartments-bill-${billingData.siteName}-${billingData.unit}-${billingData.billingMonth}-${billingData.billingYear}.pdf`)
+    showToast('success', 'PDF exported successfully!')
   }
 
   const exportAsImage = async () => {
@@ -245,6 +351,7 @@ export default function Home() {
     link.download = `cinco-apartments-bill-${billingData.siteName}-${billingData.unit}-${billingData.billingMonth}-${billingData.billingYear}.png`
     link.href = canvas.toDataURL()
     link.click()
+    showToast('success', 'Image exported successfully!')
   }
 
   // Sample analytics data
@@ -268,6 +375,22 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg flex items-center space-x-2 ${
+          toast.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
+          {toast.type === 'success' ? (
+            <Save className="w-4 h-4" />
+          ) : (
+            <AlertTriangle className="w-4 h-4" />
+          )}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -279,6 +402,13 @@ export default function Home() {
             <div className="flex space-x-4">
               {activeTab === 'billing' && (
                 <>
+                  <button
+                    onClick={saveBillingRecord}
+                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Bill
+                  </button>
                   <button
                     onClick={exportAsPDF}
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

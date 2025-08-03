@@ -1,6 +1,7 @@
 'use client'
 
-import { HomeIcon, Zap, Droplets, Calculator } from 'lucide-react'
+import { useState } from 'react'
+import { Calculator, Zap, Droplets, Home, User, Calendar, CreditCard, Upload, Camera } from 'lucide-react'
 
 interface Site {
   id: string
@@ -86,17 +87,44 @@ export default function BillingForm({
   getSiteById,
   getTenantById
 }: BillingFormProps) {
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('')
+
+  // Quick fill from tenant
+  const handleTenantSelect = (tenantId: string) => {
+    const tenant = getTenantById(tenantId)
+    if (tenant) {
+      const site = getSiteById(tenant.siteId)
+      updateBillingData('tenantName', tenant.name)
+      updateBillingData('unit', tenant.unit)
+      updateBillingData('siteName', site?.name || '')
+      updateBillingData('baseRent', tenant.baseRent)
+      setSelectedTenantId(tenantId)
+    }
+  }
+
+  // Get available units for selected site
+  const getUnitsForSite = (siteName: string) => {
+    const site = sites.find(s => s.name === siteName)
+    if (!site) return []
+    
+    return tenants
+      .filter(tenant => tenant.siteId === site.id)
+      .map(tenant => tenant.unit)
+      .filter((unit, index, arr) => arr.indexOf(unit) === index) // Remove duplicates
+  }
+
   return (
-    <div className="lg:col-span-2 space-y-6">
+    <div className="space-y-6">
       {/* Basic Information */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-          <HomeIcon className="w-5 h-5 mr-2" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <Home className="w-5 h-5 mr-2" />
           Basic Information
-        </h2>
+        </h3>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
             <select
               value={billingData.siteName}
               onChange={(e) => updateBillingData('siteName', e.target.value)}
@@ -108,6 +136,7 @@ export default function BillingForm({
               ))}
             </select>
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
             <select
@@ -116,69 +145,66 @@ export default function BillingForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             >
               <option value="">Select a unit</option>
-              {tenants
-                .filter(tenant => !billingData.siteName || getSiteById(tenant.siteId)?.name === billingData.siteName)
-                .map(tenant => (
-                  <option key={tenant.id} value={tenant.unit}>{tenant.unit}</option>
-                ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tenant</label>
-            <select
-              value={billingData.tenantName}
-              onChange={(e) => {
-                const selectedTenant = tenants.find(t => t.name === e.target.value)
-                updateBillingData('tenantName', e.target.value)
-                if (selectedTenant) {
-                  updateBillingData('unit', selectedTenant.unit)
-                  updateBillingData('siteName', getSiteById(selectedTenant.siteId)?.name || '')
-                }
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-            >
-              <option value="">Select a tenant</option>
-              {tenants.map(tenant => (
-                <option key={tenant.id} value={tenant.name}>{tenant.name} - {tenant.unit}</option>
+              {getUnitsForSite(billingData.siteName).map(unit => (
+                <option key={unit} value={unit}>{unit}</option>
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-              <select
-                value={billingData.billingMonth}
-                onChange={(e) => updateBillingData('billingMonth', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              >
-                {months.map(month => (
-                  <option key={month} value={month}>{month}</option>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tenant Name</label>
+            <select
+              value={selectedTenantId}
+              onChange={(e) => handleTenantSelect(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              <option value="">Select a tenant</option>
+              {tenants
+                .filter(tenant => !billingData.siteName || getSiteById(tenant.siteId)?.name === billingData.siteName)
+                .map(tenant => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.name} - {tenant.unit}
+                  </option>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-              <select
-                value={billingData.billingYear}
-                onChange={(e) => updateBillingData('billingYear', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              >
-                {years.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </div>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Billing Month</label>
+            <select
+              value={billingData.billingMonth}
+              onChange={(e) => updateBillingData('billingMonth', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              {months.map(month => (
+                <option key={month} value={month}>{month}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Billing Year</label>
+            <select
+              value={billingData.billingYear}
+              onChange={(e) => updateBillingData('billingYear', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            >
+              {years.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
 
       {/* Electricity Billing */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           <Zap className="w-5 h-5 mr-2" />
           Electricity Billing
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Previous Reading (kWh)</label>
             <input
@@ -188,6 +214,7 @@ export default function BillingForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Current Reading (kWh)</label>
             <input
@@ -197,6 +224,7 @@ export default function BillingForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Price per kWh (₱)</label>
             <input
@@ -207,42 +235,62 @@ export default function BillingForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
-        </div>
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Consumption (kWh)</p>
-            <p className="text-2xl font-bold text-blue-600">{electricityConsumption.toFixed(2)}</p>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Consumption (kWh)</label>
+            <input
+              type="number"
+              value={electricityConsumption}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
+            />
           </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Total Electricity Bill</p>
-            <p className="text-2xl font-bold text-green-600">₱{electricityTotal.toFixed(2)}</p>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Total Electricity Bill (₱)</label>
+            <input
+              type="number"
+              value={electricityTotal}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
+            />
           </div>
-        </div>
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Upload Meter Photo</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handlePhotoUpload('electricity', file)
-            }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-          />
-          {billingData.electricityPhoto && (
-            <div className="mt-2">
-              <img src={billingData.electricityPhoto} alt="Electricity meter" className="w-32 h-32 object-cover rounded-lg" />
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Meter Photo</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handlePhotoUpload('electricity', file)
+                }}
+                className="hidden"
+                id="electricity-photo"
+              />
+              <label
+                htmlFor="electricity-photo"
+                className="flex items-center px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 bg-white text-gray-900"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                Upload Photo
+              </label>
+              {billingData.electricityPhoto && (
+                <span className="text-sm text-green-600">✓ Uploaded</span>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
       {/* Water Billing */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           <Droplets className="w-5 h-5 mr-2" />
           Water Billing (Tiered)
-        </h2>
+        </h3>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Previous Reading (m³)</label>
@@ -253,6 +301,7 @@ export default function BillingForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Current Reading (m³)</label>
             <input
@@ -262,86 +311,102 @@ export default function BillingForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
-        </div>
-        
-        <div className="mt-4">
-          <h3 className="text-lg font-medium text-gray-900 mb-3">Water Rates</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">First 10 m³ (₱)</label>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">First 10 m³ (₱) - Flat Fee</label>
+            <input
+              type="number"
+              value={billingData.waterRates.first10}
+              onChange={(e) => updateWaterRates('first10', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">11–20 m³ (₱ per m³)</label>
+            <input
+              type="number"
+              value={billingData.waterRates.next10}
+              onChange={(e) => updateWaterRates('next10', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">21–30 m³ (₱ per m³)</label>
+            <input
+              type="number"
+              value={billingData.waterRates.next10_2}
+              onChange={(e) => updateWaterRates('next10_2', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Above 30 m³ (₱ per m³)</label>
+            <input
+              type="number"
+              value={billingData.waterRates.above30}
+              onChange={(e) => updateWaterRates('above30', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Consumption (m³)</label>
+            <input
+              type="number"
+              value={waterConsumption}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Total Water Bill (₱)</label>
+            <input
+              type="number"
+              value={waterTotal}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Meter Photo</label>
+            <div className="flex items-center space-x-2">
               <input
-                type="number"
-                value={billingData.waterRates.first10}
-                onChange={(e) => updateWaterRates('first10', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handlePhotoUpload('water', file)
+                }}
+                className="hidden"
+                id="water-photo"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">11-20 m³ (₱/m³)</label>
-              <input
-                type="number"
-                value={billingData.waterRates.next10}
-                onChange={(e) => updateWaterRates('next10', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">21-30 m³ (₱/m³)</label>
-              <input
-                type="number"
-                value={billingData.waterRates.next10_2}
-                onChange={(e) => updateWaterRates('next10_2', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Above 30 m³ (₱/m³)</label>
-              <input
-                type="number"
-                value={billingData.waterRates.above30}
-                onChange={(e) => updateWaterRates('above30', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              />
+              <label
+                htmlFor="water-photo"
+                className="flex items-center px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 bg-white text-gray-900"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                Upload Photo
+              </label>
+              {billingData.waterPhoto && (
+                <span className="text-sm text-green-600">✓ Uploaded</span>
+              )}
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Consumption (m³)</p>
-            <p className="text-2xl font-bold text-blue-600">{waterConsumption.toFixed(2)}</p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Total Water Bill</p>
-            <p className="text-2xl font-bold text-green-600">₱{waterTotal.toFixed(2)}</p>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Upload Meter Photo</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handlePhotoUpload('water', file)
-            }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-          />
-          {billingData.waterPhoto && (
-            <div className="mt-2">
-              <img src={billingData.waterPhoto} alt="Water meter" className="w-32 h-32 object-cover rounded-lg" />
-            </div>
-          )}
         </div>
       </div>
 
       {/* Rent and Other Fees */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-          <Calculator className="w-5 h-5 mr-2" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <CreditCard className="w-5 h-5 mr-2" />
           Rent and Other Fees
-        </h2>
+        </h3>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Base Rent (₱)</label>
@@ -352,59 +417,105 @@ export default function BillingForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={billingData.parkingEnabled}
-              onChange={(e) => updateBillingData('parkingEnabled', e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label className="text-sm font-medium text-gray-700">Include Parking Fee</label>
-          </div>
-          {billingData.parkingEnabled && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parking Fee (₱)</label>
-              <input
-                type="number"
-                value={billingData.parkingFee}
-                onChange={(e) => updateBillingData('parkingFee', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              />
-            </div>
-          )}
-        </div>
-        
-        <div className="mt-4 space-y-4">
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Damage Description (Optional)</label>
-            <textarea
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parking Fee (₱)</label>
+            <input
+              type="number"
+              value={billingData.parkingFee}
+              onChange={(e) => updateBillingData('parkingFee', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+          
+          <div className="md:col-span-2">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={billingData.parkingEnabled}
+                onChange={(e) => updateBillingData('parkingEnabled', e.target.checked)}
+                className="mr-2"
+              />
+              <span className="text-sm font-medium text-gray-700">Include Parking Fee</span>
+            </label>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Damage Description</label>
+            <input
+              type="text"
               value={billingData.damageDescription}
               onChange={(e) => updateBillingData('damageDescription', e.target.value)}
+              placeholder="Optional"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              rows={2}
-              placeholder="Describe any damages..."
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Other Fee Description</label>
-              <input
-                type="text"
-                value={billingData.otherFeeDescription}
-                onChange={(e) => updateBillingData('otherFeeDescription', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                placeholder="e.g., Late payment fee"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Other Fee Amount (₱)</label>
-              <input
-                type="number"
-                value={billingData.otherFeeAmount}
-                onChange={(e) => updateBillingData('otherFeeAmount', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-              />
-            </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Other Fee Description</label>
+            <input
+              type="text"
+              value={billingData.otherFeeDescription}
+              onChange={(e) => updateBillingData('otherFeeDescription', e.target.value)}
+              placeholder="Optional"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Other Fee Amount (₱)</label>
+            <input
+              type="number"
+              value={billingData.otherFeeAmount}
+              onChange={(e) => updateBillingData('otherFeeAmount', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parking Total (₱)</label>
+            <input
+              type="number"
+              value={parkingTotal}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="bg-blue-50 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+          <Calculator className="w-5 h-5 mr-2" />
+          Bill Summary
+        </h3>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-gray-700">Base Rent:</span>
+            <span className="font-medium">₱{billingData.baseRent.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-700">Electricity:</span>
+            <span className="font-medium">₱{electricityTotal.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-700">Water:</span>
+            <span className="font-medium">₱{waterTotal.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-700">Parking:</span>
+            <span className="font-medium">₱{parkingTotal.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-700">Other Fees:</span>
+            <span className="font-medium">₱{billingData.otherFeeAmount.toLocaleString()}</span>
+          </div>
+          <hr className="border-gray-300" />
+          <div className="flex justify-between text-lg font-bold text-blue-900">
+            <span>Grand Total:</span>
+            <span>₱{grandTotal.toLocaleString()}</span>
           </div>
         </div>
       </div>

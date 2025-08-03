@@ -1,15 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { FileText, Image as ImageIcon, Calculator, Building2, Save, AlertTriangle } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Home as HomeIcon, FileText, Settings, History, Plus, Save, Download, Image as ImageIcon, AlertTriangle } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import BillingForm from './components/BillingForm'
 import ReceiptPreview from './components/ReceiptPreview'
 import ManagementPanel from './components/ManagementPanel'
-import MeterPhotos from './components/MeterPhotos'
 import TransactionHistory from './components/TransactionHistory'
+import MeterPhotos from './components/MeterPhotos'
 
 interface BillingData {
   siteName: string
@@ -417,7 +416,179 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Toast Notification */}
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center space-x-3">
+              <HomeIcon className="w-8 h-8 text-blue-600" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Cinco Apartments</h1>
+                <p className="text-sm text-gray-600">Billing Management System</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => saveBillingRecord()}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Receipt
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation Tabs */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'billing'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <FileText className="w-4 h-4" />
+                <span>Billing</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('management')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'management'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Settings className="w-4 h-4" />
+                <span>Management</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'history'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <History className="w-4 h-4" />
+                <span>History</span>
+              </div>
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'billing' && (
+          <div className="space-y-8">
+            {/* Page Header */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Create New Bill</h2>
+                  <p className="text-gray-600 mt-1">Fill in the billing information below to generate a receipt</p>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={exportAsImage}
+                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    Export Image
+                  </button>
+                  <button
+                    onClick={exportAsPDF}
+                    className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Billing Form */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <BillingForm
+                billingData={billingData}
+                updateBillingData={updateBillingData}
+                updateWaterRates={updateWaterRates}
+                handlePhotoUpload={handlePhotoUpload}
+                electricityConsumption={electricityConsumption}
+                electricityTotal={electricityTotal}
+                waterConsumption={waterConsumption}
+                waterTotal={waterTotal}
+                parkingTotal={parkingTotal}
+                grandTotal={grandTotal}
+                months={months}
+                years={years}
+                sites={sites}
+                tenants={tenants}
+                getSiteById={getSiteById}
+                getTenantById={getTenantById}
+              />
+            </div>
+
+            {/* Receipt Preview */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <ReceiptPreview
+                receiptRef={receiptRef}
+                billingData={billingData}
+                electricityTotal={electricityTotal}
+                waterTotal={waterTotal}
+                parkingTotal={parkingTotal}
+                grandTotal={grandTotal}
+              />
+            </div>
+
+            {/* Hidden Meter Photos for Export */}
+            <div className="hidden">
+              <MeterPhotos
+                photosRef={meterPhotosRef}
+                billingData={billingData}
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'management' && (
+          <ManagementPanel
+            sites={sites}
+            tenants={tenants}
+            billingRecords={billingRecords}
+            getSiteById={getSiteById}
+            getTenantById={getTenantById}
+            addSite={addSite}
+            updateSite={updateSite}
+            deleteSite={deleteSite}
+            addTenant={addTenant}
+            updateTenant={updateTenant}
+            deleteTenant={deleteTenant}
+          />
+        )}
+
+        {activeTab === 'history' && (
+          <TransactionHistory
+            billingRecords={billingRecords}
+            sites={sites}
+            tenants={tenants}
+            getSiteById={getSiteById}
+            getTenantById={getTenantById}
+          />
+        )}
+      </main>
+
+      {/* Toast Notifications */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg flex items-center space-x-2 ${
           toast.type === 'success' 
@@ -432,144 +603,6 @@ export default function Home() {
           <span>{toast.message}</span>
         </div>
       )}
-
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Cinco Apartments</h1>
-              <p className="text-gray-600">Billing System</p>
-            </div>
-            <div className="flex space-x-4">
-              {activeTab === 'billing' && (
-                <>
-                  <button
-                    onClick={saveBillingRecord}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Bill
-                  </button>
-                  <button
-                    onClick={exportAsPDF}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Export PDF
-                  </button>
-                  <button
-                    onClick={exportAsImage}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <ImageIcon className="w-4 h-4 mr-2" />
-                    Export Image
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          
-          {/* Tab Navigation */}
-          <div className="flex space-x-8 border-b">
-            <button
-              onClick={() => setActiveTab('billing')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'billing'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Calculator className="w-4 h-4 inline mr-2" />
-              Billing
-            </button>
-            <button
-              onClick={() => setActiveTab('management')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'management'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Building2 className="w-4 h-4 inline mr-2" />
-              Management
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'history'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <FileText className="w-4 h-4 inline mr-2" />
-              History
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'billing' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <BillingForm
-              billingData={billingData}
-              updateBillingData={updateBillingData}
-              updateWaterRates={updateWaterRates}
-              handlePhotoUpload={handlePhotoUpload}
-              electricityConsumption={electricityConsumption}
-              electricityTotal={electricityTotal}
-              waterConsumption={waterConsumption}
-              waterTotal={waterTotal}
-              parkingTotal={parkingTotal}
-              grandTotal={grandTotal}
-              months={months}
-              years={years}
-              sites={sites}
-              tenants={tenants}
-              getSiteById={getSiteById}
-              getTenantById={getTenantById}
-            />
-            <ReceiptPreview
-              receiptRef={receiptRef}
-              billingData={billingData}
-              electricityTotal={electricityTotal}
-              waterTotal={waterTotal}
-              parkingTotal={parkingTotal}
-              grandTotal={grandTotal}
-            />
-            {/* Hidden meter photos component for PDF/image export */}
-            <div className="hidden">
-              <MeterPhotos
-                photosRef={meterPhotosRef}
-                billingData={billingData}
-              />
-            </div>
-          </div>
-        ) : activeTab === 'management' ? (
-          <ManagementPanel
-            sites={sites}
-            tenants={tenants}
-            billingRecords={billingRecords}
-            getSiteById={getSiteById}
-            getTenantById={getTenantById}
-            addSite={addSite}
-            updateSite={updateSite}
-            deleteSite={deleteSite}
-            addTenant={addTenant}
-            updateTenant={updateTenant}
-            deleteTenant={deleteTenant}
-          />
-        ) : (
-          <TransactionHistory
-            billingRecords={billingRecords}
-            sites={sites}
-            tenants={tenants}
-            getSiteById={getSiteById}
-            getTenantById={getTenantById}
-          />
-        )}
-      </div>
     </div>
   )
 } 

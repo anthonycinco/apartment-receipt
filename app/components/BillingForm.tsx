@@ -8,24 +8,22 @@ interface Site {
   name: string
   address: string
   totalUnits: number
-  occupiedUnits: number
 }
 
 interface Tenant {
   id: string
   name: string
   siteId: string
-  unit: string
+  doorNumber: string
   phone: string
   email: string
-  moveInDate: string
   baseRent: number
   status: 'active' | 'inactive'
 }
 
 interface BillingData {
   siteName: string
-  unit: string
+  doorNumber: string
   tenantName: string
   billingMonth: string
   billingYear: string
@@ -95,22 +93,22 @@ export default function BillingForm({
     if (tenant) {
       const site = getSiteById(tenant.siteId)
       updateBillingData('tenantName', tenant.name)
-      updateBillingData('unit', tenant.unit)
+      updateBillingData('doorNumber', tenant.doorNumber)
       updateBillingData('siteName', site?.name || '')
       updateBillingData('baseRent', tenant.baseRent)
       setSelectedTenantId(tenantId)
     }
   }
 
-  // Get available units for selected site
-  const getUnitsForSite = (siteName: string) => {
+  // Get available door numbers for selected site
+  const getDoorNumbersForSite = (siteName: string) => {
     const site = sites.find(s => s.name === siteName)
     if (!site) return []
     
     return tenants
       .filter(tenant => tenant.siteId === site.id)
-      .map(tenant => tenant.unit)
-      .filter((unit, index, arr) => arr.indexOf(unit) === index) // Remove duplicates
+      .map(tenant => tenant.doorNumber)
+      .filter((doorNumber, index, arr) => arr.indexOf(doorNumber) === index) // Remove duplicates
   }
 
   return (
@@ -138,15 +136,15 @@ export default function BillingForm({
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Door Number</label>
             <select
-              value={billingData.unit}
-              onChange={(e) => updateBillingData('unit', e.target.value)}
+              value={billingData.doorNumber}
+              onChange={(e) => updateBillingData('doorNumber', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             >
-              <option value="">Select a unit</option>
-              {getUnitsForSite(billingData.siteName).map(unit => (
-                <option key={unit} value={unit}>{unit}</option>
+              <option value="">Select a door number</option>
+              {getDoorNumbersForSite(billingData.siteName).map(doorNumber => (
+                <option key={doorNumber} value={doorNumber}>{doorNumber}</option>
               ))}
             </select>
           </div>
@@ -163,7 +161,7 @@ export default function BillingForm({
                 .filter(tenant => !billingData.siteName || getSiteById(tenant.siteId)?.name === billingData.siteName)
                 .map(tenant => (
                   <option key={tenant.id} value={tenant.id}>
-                    {tenant.name} - {tenant.unit}
+                    {tenant.name} - {tenant.doorNumber}
                   </option>
                 ))}
             </select>

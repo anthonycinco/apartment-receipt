@@ -9,17 +9,15 @@ interface Site {
   name: string
   address: string
   totalUnits: number
-  occupiedUnits: number
 }
 
 interface Tenant {
   id: string
   name: string
   siteId: string
-  unit: string
+  doorNumber: string
   phone: string
   email: string
-  moveInDate: string
   baseRent: number
   status: 'active' | 'inactive'
 }
@@ -81,16 +79,14 @@ export default function ManagementPanel({
     name: '',
     address: '',
     totalUnits: 0,
-    occupiedUnits: 0
   })
   
   const [tenantForm, setTenantForm] = useState({
     name: '',
     siteId: '',
-    unit: '',
+    doorNumber: '',
     phone: '',
     email: '',
-    moveInDate: '',
     baseRent: 0,
     status: 'active' as 'active' | 'inactive'
   })
@@ -104,7 +100,7 @@ export default function ManagementPanel({
   const filteredTenants = tenants.filter(tenant => {
     const site = getSiteById(tenant.siteId)
     const matchesSearch = tenant.name.toLowerCase().includes(tenantSearchTerm.toLowerCase()) ||
-                         tenant.unit.toLowerCase().includes(tenantSearchTerm.toLowerCase()) ||
+                         tenant.doorNumber.toLowerCase().includes(tenantSearchTerm.toLowerCase()) ||
                          tenant.phone.includes(tenantSearchTerm) ||
                          tenant.email.toLowerCase().includes(tenantSearchTerm.toLowerCase())
     const matchesSite = selectedSite === 'all' || tenant.siteId === selectedSite
@@ -122,10 +118,10 @@ export default function ManagementPanel({
   const activeTenants = tenants.filter(t => t.status === 'active' && 
     (selectedSite === 'all' || getSiteById(t.siteId)?.id === selectedSite))
   const occupancyRate = selectedSite === 'all' 
-    ? Math.round((sites.reduce((sum, site) => sum + site.occupiedUnits, 0) / sites.reduce((sum, site) => sum + site.totalUnits, 0)) * 100)
+    ? Math.round((activeTenants.length / sites.reduce((sum, site) => sum + site.totalUnits, 0)) * 100)
     : (() => {
         const site = sites.find(s => s.id === selectedSite)
-        return site ? Math.round((site.occupiedUnits / site.totalUnits) * 100) : 0
+        return site ? Math.round((activeTenants.filter(t => t.siteId === site.id).length / site.totalUnits) * 100) : 0
       })()
 
   const handleSiteSubmit = (e: React.FormEvent) => {
@@ -137,7 +133,7 @@ export default function ManagementPanel({
     }
     setShowSiteModal(false)
     setEditingSite(null)
-    setSiteForm({ name: '', address: '', totalUnits: 0, occupiedUnits: 0 })
+    setSiteForm({ name: '', address: '', totalUnits: 0 })
   }
 
   const handleTenantSubmit = (e: React.FormEvent) => {
@@ -152,10 +148,9 @@ export default function ManagementPanel({
     setTenantForm({
       name: '',
       siteId: '',
-      unit: '',
+      doorNumber: '',
       phone: '',
       email: '',
-      moveInDate: '',
       baseRent: 0,
       status: 'active'
     })
@@ -168,11 +163,10 @@ export default function ManagementPanel({
         name: site.name,
         address: site.address,
         totalUnits: site.totalUnits,
-        occupiedUnits: site.occupiedUnits
       })
     } else {
       setEditingSite(null)
-      setSiteForm({ name: '', address: '', totalUnits: 0, occupiedUnits: 0 })
+      setSiteForm({ name: '', address: '', totalUnits: 0 })
     }
     setShowSiteModal(true)
   }
@@ -183,10 +177,9 @@ export default function ManagementPanel({
       setTenantForm({
         name: tenant.name,
         siteId: tenant.siteId,
-        unit: tenant.unit,
+        doorNumber: tenant.doorNumber,
         phone: tenant.phone,
         email: tenant.email,
-        moveInDate: tenant.moveInDate,
         baseRent: tenant.baseRent,
         status: tenant.status
       })
@@ -195,10 +188,9 @@ export default function ManagementPanel({
       setTenantForm({
         name: '',
         siteId: '',
-        unit: '',
+        doorNumber: '',
         phone: '',
         email: '',
-        moveInDate: '',
         baseRent: 0,
         status: 'active'
       })
@@ -244,14 +236,13 @@ export default function ManagementPanel({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Units</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Occupied</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredSites.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
                     {siteSearchTerm ? 'No sites found matching your search.' : 'No sites added yet.'}
                   </td>
                 </tr>
@@ -261,7 +252,6 @@ export default function ManagementPanel({
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{site.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.address}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.totalUnits}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.occupiedUnits}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button 
                         onClick={() => openSiteModal(site)}
@@ -332,7 +322,7 @@ export default function ManagementPanel({
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Door Number</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base Rent</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -355,7 +345,7 @@ export default function ManagementPanel({
                     <tr key={tenant.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tenant.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site?.name || 'N/A'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tenant.unit}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tenant.doorNumber}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tenant.phone}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₱{tenant.baseRent.toLocaleString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -423,7 +413,7 @@ export default function ManagementPanel({
               {tenants
                 .filter(tenant => selectedSite === 'all' || getSiteById(tenant.siteId)?.id === selectedSite)
                 .map(tenant => (
-                  <option key={tenant.id} value={tenant.id}>{tenant.name} - {tenant.unit}</option>
+                  <option key={tenant.id} value={tenant.id}>{tenant.name} - {tenant.doorNumber}</option>
                 ))}
             </select>
           </div>
@@ -482,7 +472,7 @@ export default function ManagementPanel({
                     <div key={site.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                       <div>
                         <h4 className="font-medium text-gray-900">{site.name}</h4>
-                        <p className="text-sm text-gray-500">{site.occupiedUnits}/{site.totalUnits} units occupied</p>
+                        <p className="text-sm text-gray-500">{activeTenants.filter(t => t.siteId === site.id).length}/{site.totalUnits} units occupied</p>
                       </div>
                       <div className="text-right">
                         <p className="font-medium text-gray-900">₱{totalRevenue.toLocaleString()}</p>
@@ -531,16 +521,6 @@ export default function ManagementPanel({
                     type="number"
                     value={siteForm.totalUnits}
                     onChange={(e) => setSiteForm(prev => ({ ...prev, totalUnits: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Occupied Units</label>
-                  <input
-                    type="number"
-                    value={siteForm.occupiedUnits}
-                    onChange={(e) => setSiteForm(prev => ({ ...prev, occupiedUnits: parseInt(e.target.value) || 0 }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                     required
                   />
@@ -599,11 +579,11 @@ export default function ManagementPanel({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Door Number</label>
                 <input
                   type="text"
-                  value={tenantForm.unit}
-                  onChange={(e) => setTenantForm(prev => ({ ...prev, unit: e.target.value }))}
+                  value={tenantForm.doorNumber}
+                  onChange={(e) => setTenantForm(prev => ({ ...prev, doorNumber: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                   required
                 />
@@ -624,16 +604,6 @@ export default function ManagementPanel({
                   type="email"
                   value={tenantForm.email}
                   onChange={(e) => setTenantForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Move-in Date</label>
-                <input
-                  type="date"
-                  value={tenantForm.moveInDate}
-                  onChange={(e) => setTenantForm(prev => ({ ...prev, moveInDate: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                   required
                 />

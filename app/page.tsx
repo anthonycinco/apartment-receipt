@@ -11,7 +11,7 @@ import ManagementPanel from './components/ManagementPanel'
 
 interface BillingData {
   siteName: string
-  unit: string
+  doorNumber: string
   tenantName: string
   billingMonth: string
   billingYear: string
@@ -41,17 +41,15 @@ interface Site {
   name: string
   address: string
   totalUnits: number
-  occupiedUnits: number
 }
 
 interface Tenant {
   id: string
   name: string
   siteId: string
-  unit: string
+  doorNumber: string
   phone: string
   email: string
-  moveInDate: string
   baseRent: number
   status: 'active' | 'inactive'
 }
@@ -116,7 +114,7 @@ export default function Home() {
     
     return {
       siteName: '',
-      unit: '',
+      doorNumber: '',
       tenantName: '',
       billingMonth: months[new Date().getMonth()],
       billingYear: new Date().getFullYear().toString(),
@@ -334,7 +332,7 @@ export default function Home() {
       heightLeft -= pageHeight
     }
 
-    pdf.save(`cinco-apartments-bill-${billingData.siteName}-${billingData.unit}-${billingData.billingMonth}-${billingData.billingYear}.pdf`)
+    pdf.save(`cinco-apartments-bill-${billingData.siteName}-${billingData.doorNumber}-${billingData.billingMonth}-${billingData.billingYear}.pdf`)
     showToast('success', 'PDF exported successfully!')
   }
 
@@ -348,7 +346,7 @@ export default function Home() {
     })
     
     const link = document.createElement('a')
-    link.download = `cinco-apartments-bill-${billingData.siteName}-${billingData.unit}-${billingData.billingMonth}-${billingData.billingYear}.png`
+    link.download = `cinco-apartments-bill-${billingData.siteName}-${billingData.doorNumber}-${billingData.billingMonth}-${billingData.billingYear}.png`
     link.href = canvas.toDataURL()
     link.click()
     showToast('success', 'Image exported successfully!')

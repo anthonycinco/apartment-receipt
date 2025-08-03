@@ -4,7 +4,7 @@ import { RefObject } from 'react'
 
 interface BillingData {
   siteName: string
-  unit: string
+  doorNumber: string
   tenantName: string
   billingMonth: string
   billingYear: string
@@ -64,8 +64,8 @@ export default function ReceiptPreview({
               <span>{billingData.siteName || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium">Unit:</span>
-              <span>{billingData.unit || 'N/A'}</span>
+              <span className="font-medium">Door Number:</span>
+              <span>{billingData.doorNumber || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
               <span className="font-medium">Tenant:</span>

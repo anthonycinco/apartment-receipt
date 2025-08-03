@@ -294,12 +294,36 @@ export default function Home() {
     try {
       console.log(`Uploading ${type} photo:`, file.name, file.size, 'bytes')
       
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showToast('error', 'Please select an image file')
+        return
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('error', 'Image file is too large. Please select a file under 5MB')
+        return
+      }
+      
       const reader = new FileReader()
       reader.onload = (e) => {
-        const photoData = e.target?.result as string
-        console.log(`${type} photo uploaded successfully, data length:`, photoData.length)
-        updateBillingData(type === 'electricity' ? 'electricityPhoto' : 'waterPhoto', photoData)
-        showToast('success', `${type.charAt(0).toUpperCase() + type.slice(1)} photo uploaded successfully!`)
+        try {
+          const photoData = e.target?.result as string
+          console.log(`${type} photo uploaded successfully, data length:`, photoData.length)
+          
+          // Validate the data URL
+          if (!photoData.startsWith('data:image/')) {
+            showToast('error', 'Invalid image format')
+            return
+          }
+          
+          updateBillingData(type === 'electricity' ? 'electricityPhoto' : 'waterPhoto', photoData)
+          showToast('success', `${type.charAt(0).toUpperCase() + type.slice(1)} photo uploaded successfully!`)
+        } catch (error) {
+          console.error(`Error processing ${type} photo:`, error)
+          showToast('error', `Failed to process ${type} photo`)
+        }
       }
       reader.onerror = (error) => {
         console.error(`Error reading ${type} photo:`, error)
@@ -323,16 +347,22 @@ export default function Home() {
       
       console.log('Starting PDF export...')
       
+      // Wait a bit for any pending renders
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       const canvas = await html2canvas(receiptRef.current, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        logging: true
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: receiptRef.current.scrollWidth,
+        height: receiptRef.current.scrollHeight
       })
       
       console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
       
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = canvas.toDataURL('image/png', 1.0)
       const pdf = new jsPDF('p', 'mm', 'a4')
       const imgWidth = 210
       const pageHeight = 295
@@ -354,14 +384,21 @@ export default function Home() {
       // Add meter photos page if photos exist
       if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
         console.log('Adding meter photos page...')
+        
+        // Wait a bit for meter photos to render
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
         const photosCanvas = await html2canvas(meterPhotosRef.current, {
           scale: 2,
           useCORS: true,
           allowTaint: true,
-          logging: true
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: meterPhotosRef.current.scrollWidth,
+          height: meterPhotosRef.current.scrollHeight
         })
         
-        const photosImgData = photosCanvas.toDataURL('image/png')
+        const photosImgData = photosCanvas.toDataURL('image/png', 1.0)
         const photosImgHeight = (photosCanvas.height * imgWidth) / photosCanvas.width
         let photosHeightLeft = photosImgHeight
 
@@ -398,11 +435,17 @@ export default function Home() {
       
       console.log('Starting image export...')
       
+      // Wait a bit for any pending renders
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       const canvas = await html2canvas(receiptRef.current, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        logging: true
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: receiptRef.current.scrollWidth,
+        height: receiptRef.current.scrollHeight
       })
       
       console.log('Canvas created, dimensions:', canvas.width, 'x', canvas.height)
@@ -411,23 +454,30 @@ export default function Home() {
       
       const link = document.createElement('a')
       link.download = fileName
-      link.href = canvas.toDataURL()
+      link.href = canvas.toDataURL('image/png', 1.0)
       link.click()
       
       // Export meter photos as separate image if they exist
       if ((billingData.electricityPhoto || billingData.waterPhoto) && meterPhotosRef.current) {
         console.log('Exporting meter photos as separate image...')
+        
+        // Wait a bit for meter photos to render
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
         const photosCanvas = await html2canvas(meterPhotosRef.current, {
           scale: 2,
           useCORS: true,
           allowTaint: true,
-          logging: true
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: meterPhotosRef.current.scrollWidth,
+          height: meterPhotosRef.current.scrollHeight
         })
         
         const photosFileName = `cinco-apartments-meter-photos-${billingData.siteName || 'unknown'}-${billingData.doorNumber || 'unknown'}-${billingData.billingMonth || 'unknown'}-${billingData.billingYear || 'unknown'}.png`
         const photosLink = document.createElement('a')
         photosLink.download = photosFileName
-        photosLink.href = photosCanvas.toDataURL()
+        photosLink.href = photosCanvas.toDataURL('image/png', 1.0)
         photosLink.click()
       }
       

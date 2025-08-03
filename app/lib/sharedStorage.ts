@@ -95,33 +95,6 @@ class SharedStorage {
     }
   }
 
-  private syncWithLocalStorage() {
-    const currentData = this.getCurrentData()
-    const lastSync = localStorage.getItem('lastSyncTime')
-    
-    if (lastSync && parseInt(lastSync) > this.lastSyncTime) {
-      // Another user updated data, merge it
-      const sharedData = localStorage.getItem('sharedData')
-      if (sharedData) {
-        const parsed = JSON.parse(sharedData)
-        const mergedData = this.mergeData(parsed, currentData)
-        this.updateLocalStorage(mergedData)
-      }
-    }
-    
-    // Update shared data
-    const sharedData: SharedData = {
-      sites: currentData.sites,
-      tenants: currentData.tenants,
-      billingRecords: currentData.billingRecords,
-      lastUpdated: new Date().toISOString()
-    }
-    
-    localStorage.setItem('sharedData', JSON.stringify(sharedData))
-    localStorage.setItem('lastSyncTime', Date.now().toString())
-    this.lastSyncTime = Date.now()
-  }
-
   private mergeData(shared: SharedData, current: any) {
     const merged = {
       sites: [...current.sites],
@@ -157,12 +130,48 @@ class SharedStorage {
   }
 
   private updateLocalStorage(data: any) {
+    if (typeof window === 'undefined') return
     localStorage.setItem('sites', JSON.stringify(data.sites))
     localStorage.setItem('tenants', JSON.stringify(data.tenants))
     localStorage.setItem('billingRecords', JSON.stringify(data.billingRecords))
   }
 
+  private syncWithLocalStorage() {
+    if (typeof window === 'undefined') return
+    const currentData = this.getCurrentData()
+    const lastSync = localStorage.getItem('lastSyncTime')
+    
+    if (lastSync && parseInt(lastSync) > this.lastSyncTime) {
+      // Another user updated data, merge it
+      const sharedData = localStorage.getItem('sharedData')
+      if (sharedData) {
+        const parsed = JSON.parse(sharedData)
+        const mergedData = this.mergeData(parsed, currentData)
+        this.updateLocalStorage(mergedData)
+      }
+    }
+    
+    // Update shared data
+    const sharedData: SharedData = {
+      sites: currentData.sites,
+      tenants: currentData.tenants,
+      billingRecords: currentData.billingRecords,
+      lastUpdated: new Date().toISOString()
+    }
+    
+    localStorage.setItem('sharedData', JSON.stringify(sharedData))
+    localStorage.setItem('lastSyncTime', Date.now().toString())
+    this.lastSyncTime = Date.now()
+  }
+
   private getCurrentData() {
+    if (typeof window === 'undefined') {
+      return {
+        sites: [],
+        tenants: [],
+        billingRecords: []
+      }
+    }
     return {
       sites: JSON.parse(localStorage.getItem('sites') || '[]'),
       tenants: JSON.parse(localStorage.getItem('tenants') || '[]'),
@@ -172,33 +181,40 @@ class SharedStorage {
 
   // Public methods
   getSites(): Site[] {
+    if (typeof window === 'undefined') return []
     return JSON.parse(localStorage.getItem('sites') || '[]')
   }
 
   getTenants(): Tenant[] {
+    if (typeof window === 'undefined') return []
     return JSON.parse(localStorage.getItem('tenants') || '[]')
   }
 
   getBillingRecords(): BillingRecord[] {
+    if (typeof window === 'undefined') return []
     return JSON.parse(localStorage.getItem('billingRecords') || '[]')
   }
 
   saveSites(sites: Site[]) {
+    if (typeof window === 'undefined') return
     localStorage.setItem('sites', JSON.stringify(sites))
     this.syncData()
   }
 
   saveTenants(tenants: Tenant[]) {
+    if (typeof window === 'undefined') return
     localStorage.setItem('tenants', JSON.stringify(tenants))
     this.syncData()
   }
 
   saveBillingRecords(records: BillingRecord[]) {
+    if (typeof window === 'undefined') return
     localStorage.setItem('billingRecords', JSON.stringify(records))
     this.syncData()
   }
 
   addBillingRecord(record: BillingRecord) {
+    if (typeof window === 'undefined') return
     const records = this.getBillingRecords()
     records.push(record)
     this.saveBillingRecords(records)

@@ -245,7 +245,11 @@ export default function BillingForm({
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) handlePhotoUpload('electricity', file)
+                    if (file) {
+                      handlePhotoUpload('electricity', file)
+                      // Reset the input so the same file can be selected again
+                      e.target.value = ''
+                    }
                   }}
                   className="hidden"
                   id="electricity-photo"
@@ -258,6 +262,7 @@ export default function BillingForm({
                   {billingData.electricityPhoto && (
                     <p className="text-xs text-green-600 mt-1">Click to change</p>
                   )}
+                  <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
                 </label>
               </div>
             </div>
@@ -345,7 +350,11 @@ export default function BillingForm({
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) handlePhotoUpload('water', file)
+                    if (file) {
+                      handlePhotoUpload('water', file)
+                      // Reset the input so the same file can be selected again
+                      e.target.value = ''
+                    }
                   }}
                   className="hidden"
                   id="water-photo"
@@ -358,6 +367,7 @@ export default function BillingForm({
                   {billingData.waterPhoto && (
                     <p className="text-xs text-green-600 mt-1">Click to change</p>
                   )}
+                  <p className="text-xs text-gray-500 mt-1">Max 5MB, JPG/PNG</p>
                 </label>
               </div>
             </div>

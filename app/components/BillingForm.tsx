@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calculator, Zap, Droplets, Home, User, Calendar, CreditCard, AlertTriangle } from 'lucide-react'
+import { Calculator, Zap, Droplets, Home, User, Calendar, CreditCard, AlertTriangle, Save } from 'lucide-react'
 
 interface Site {
   id: string
@@ -63,6 +63,7 @@ interface BillingFormProps {
   getSiteById: (id: string) => Site | undefined
   getTenantById: (id: string) => Tenant | undefined
   onClearAll?: () => void
+  onSaveToHistory?: () => void
 }
 
 export default function BillingForm({
@@ -81,9 +82,30 @@ export default function BillingForm({
   tenants,
   getSiteById,
   getTenantById,
-  onClearAll
+  onClearAll,
+  onSaveToHistory
 }: BillingFormProps) {
   const [selectedTenantId, setSelectedTenantId] = useState<string>('')
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
+
+  // Validation function
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {}
+    
+    if (!billingData.siteName) errors.siteName = 'Site is required'
+    if (!billingData.doorNumber) errors.doorNumber = 'Door number is required'
+    if (!billingData.tenantName) errors.tenantName = 'Tenant is required'
+    if (billingData.electricityCurrent < billingData.electricityPrevious) {
+      errors.electricityCurrent = 'Current reading cannot be less than previous reading'
+    }
+    if (billingData.waterCurrent < billingData.waterPrevious) {
+      errors.waterCurrent = 'Current reading cannot be less than previous reading'
+    }
+    if (billingData.baseRent < 0) errors.baseRent = 'Base rent cannot be negative'
+    
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
   // Quick fill from tenant
   const handleTenantSelect = (tenantId: string) => {
@@ -123,13 +145,20 @@ export default function BillingForm({
             <select
               value={billingData.siteName}
               onChange={(e) => updateBillingData('siteName', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 bg-white text-gray-900 ${
+                validationErrors.siteName 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
             >
               <option value="">Select a site</option>
               {sites.map(site => (
                 <option key={site.id} value={site.name}>{site.name}</option>
               ))}
             </select>
+            {validationErrors.siteName && (
+              <p className="text-red-500 text-sm mt-1">{validationErrors.siteName}</p>
+            )}
           </div>
 
           <div>
@@ -432,6 +461,46 @@ export default function BillingForm({
             </button>
           </div>
         )}
+
+        {/* Action Buttons */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {onSaveToHistory && (
+            <button
+              onClick={onSaveToHistory}
+              className="flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save Bill to History
+            </button>
+          )}
+          
+          {/* Quick Fill Buttons */}
+          <div className="flex space-x-2">
+            <button
+              onClick={() => {
+                updateBillingData('electricityPricePerKwh', 12.5)
+                updateBillingData('waterRates', {
+                  first10: 150,
+                  next10: 25,
+                  next10_2: 30,
+                  above30: 35
+                })
+              }}
+              className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
+            >
+              Default Rates
+            </button>
+            <button
+              onClick={() => {
+                updateBillingData('parkingEnabled', true)
+                updateBillingData('parkingFee', 500)
+              }}
+              className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+            >
+              Add Parking
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

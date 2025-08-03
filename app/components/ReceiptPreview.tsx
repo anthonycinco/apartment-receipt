@@ -55,7 +55,7 @@ export default function ReceiptPreview({
         Receipt Preview
       </h3>
       
-      <div ref={receiptRef} className="bg-white border border-gray-200 rounded-lg p-8 max-w-2xl mx-auto">
+      <div ref={receiptRef} className="bg-white border border-gray-200 rounded-lg p-8 max-w-2xl mx-auto print:p-4 print:border-0 print:shadow-none">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Cinco Apartments</h1>

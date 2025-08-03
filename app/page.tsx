@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Home as HomeIcon, FileText, ImageIcon, Users, AlertTriangle } from 'lucide-react'
+import { Home as HomeIcon, FileText, ImageIcon, Users, AlertTriangle, Save, BarChart3 } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import BillingForm from './components/BillingForm'
 import ReceiptPreview from './components/ReceiptPreview'
 import ManagementPanel from './components/ManagementPanel'
 import TransactionHistory from './components/TransactionHistory'
+import Dashboard from './components/Dashboard'
 import SharedStorage, { Site, Tenant, BillingRecord } from './lib/sharedStorage'
 
 interface BillingData {
@@ -67,7 +68,7 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'billing' | 'management' | 'history'>('billing')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'billing' | 'management' | 'history'>('dashboard')
   
   // Shared storage instance
   const sharedStorage = SharedStorage.getInstance()
@@ -78,7 +79,14 @@ export default function Home() {
   const [billingRecords, setBillingRecords] = useState<BillingRecord[]>(() => sharedStorage.getBillingRecords())
   
   // Toast notification state
-  const [toast, setToast] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  const [toast, setToast] = useState<{
+    type: 'success' | 'error' | 'info'
+    message: string
+    action?: {
+      label: string
+      onClick: () => void
+    }
+  } | null>(null)
   
   // Sync state for shared data
   const [lastSync, setLastSync] = useState<string>('')
@@ -123,6 +131,35 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [billingData])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl/Cmd + S to save
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault()
+        saveBillingRecord()
+      }
+      // Ctrl/Cmd + E to export PDF
+      if ((event.ctrlKey || event.metaKey) && event.key === 'e') {
+        event.preventDefault()
+        exportAsPDF()
+      }
+      // Ctrl/Cmd + I to export image
+      if ((event.ctrlKey || event.metaKey) && event.key === 'i') {
+        event.preventDefault()
+        exportAsImage()
+      }
+      // Ctrl/Cmd + K to clear all
+      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault()
+        clearAllFields()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   // Sync shared data every 5 seconds
   useEffect(() => {
     const syncInterval = setInterval(() => {
@@ -164,9 +201,13 @@ export default function Home() {
   }
 
   // Toast notification utility
-  const showToast = (type: 'success' | 'error', message: string) => {
-    setToast({ type, message })
-    setTimeout(() => setToast(null), 3000)
+  const showToast = (
+    type: 'success' | 'error' | 'info', 
+    message: string, 
+    action?: { label: string; onClick: () => void }
+  ) => {
+    setToast({ type, message, action })
+    setTimeout(() => setToast(null), 5000)
   }
 
   // Management functions with confirmation dialogs
@@ -446,6 +487,13 @@ export default function Home() {
             </div>
             <div className="flex items-center space-x-4">
               <button
+                onClick={saveBillingRecord}
+                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save to History
+              </button>
+              <button
                 onClick={clearAllFields}
                 className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
@@ -475,6 +523,19 @@ export default function Home() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'dashboard'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="w-4 h-4" />
+                <span>Dashboard</span>
+              </div>
+            </button>
             <button
               onClick={() => setActiveTab('billing')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -520,6 +581,16 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            billingRecords={billingRecords}
+            sites={sites}
+            tenants={tenants}
+            getSiteById={getSiteById}
+            getTenantById={getTenantById}
+          />
+        )}
+
         {activeTab === 'billing' && (
           <div className="space-y-8">
             {/* Page Header */}
@@ -574,6 +645,7 @@ export default function Home() {
                 getSiteById={getSiteById}
                 getTenantById={getTenantById}
                 onClearAll={clearAllFields}
+                onSaveToHistory={saveBillingRecord}
               />
             </div>
 
@@ -625,17 +697,31 @@ export default function Home() {
 
       {/* Toast Notifications */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg flex items-center space-x-2 ${
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${
           toast.type === 'success' 
             ? 'bg-green-500 text-white' 
-            : 'bg-red-500 text-white'
+            : toast.type === 'error'
+            ? 'bg-red-500 text-white'
+            : 'bg-blue-500 text-white'
         }`}>
-          {toast.type === 'success' ? (
-            <Users className="w-4 h-4" />
-          ) : (
-            <AlertTriangle className="w-4 h-4" />
+          <div className="flex items-center space-x-2 mb-2">
+            {toast.type === 'success' ? (
+              <Users className="w-4 h-4" />
+            ) : toast.type === 'error' ? (
+              <AlertTriangle className="w-4 h-4" />
+            ) : (
+              <FileText className="w-4 h-4" />
+            )}
+            <span className="font-medium">{toast.message}</span>
+          </div>
+          {toast.action && (
+            <button
+              onClick={toast.action.onClick}
+              className="text-sm underline hover:no-underline"
+            >
+              {toast.action.label}
+            </button>
           )}
-          <span>{toast.message}</span>
         </div>
       )}
     </div>

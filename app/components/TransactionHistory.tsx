@@ -94,6 +94,8 @@ export default function TransactionHistory({
   const [selectedRecord, setSelectedRecord] = useState<BillingRecord | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set())
+  const [bulkMode, setBulkMode] = useState(false)
   
   const receiptRef = useRef<HTMLDivElement>(null)
 
@@ -402,6 +404,16 @@ export default function TransactionHistory({
           <h3 className="text-lg font-semibold text-gray-900">Transactions by Month</h3>
           <div className="flex space-x-2">
             <button
+              onClick={() => setBulkMode(!bulkMode)}
+              className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                bulkMode 
+                  ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                  : 'bg-gray-600 text-white hover:bg-gray-700'
+              }`}
+            >
+              {bulkMode ? 'Exit Bulk Mode' : 'Bulk Operations'}
+            </button>
+            <button
               onClick={expandAllGroups}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -411,10 +423,63 @@ export default function TransactionHistory({
               onClick={collapseAllGroups}
               className="px-3 py-1 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
-              Collapse All
             </button>
           </div>
         </div>
+
+        {/* Bulk Operations Bar */}
+        {bulkMode && (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <span className="text-sm font-medium text-purple-900">
+                  {selectedRecords.size} record{selectedRecords.size !== 1 ? 's' : ''} selected
+                </span>
+                <button
+                  onClick={() => setSelectedRecords(new Set())}
+                  className="text-sm text-purple-600 hover:text-purple-800"
+                >
+                  Clear Selection
+                </button>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    // Export selected records as CSV
+                    const selectedData = filteredRecords.filter(record => selectedRecords.has(record.id))
+                    const csvContent = [
+                      ['Date', 'Site', 'Tenant', 'Door Number', 'Electricity (kWh)', 'Water (m³)', 'Total (₱)'],
+                      ...selectedData.map(record => {
+                        const tenant = getTenantById(record.tenantId)
+                        const site = getSiteById(record.siteId)
+                        return [
+                          new Date(record.date).toLocaleDateString(),
+                          site?.name || 'N/A',
+                          tenant?.name || 'N/A',
+                          tenant?.doorNumber || 'N/A',
+                          record.electricityConsumption,
+                          record.waterConsumption,
+                          record.totalAmount
+                        ]
+                      })
+                    ].map(row => row.join(',')).join('\n')
+                    
+                    const blob = new Blob([csvContent], { type: 'text/csv' })
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `billing-records-${new Date().toISOString().split('T')[0]}.csv`
+                    a.click()
+                    window.URL.revokeObjectURL(url)
+                  }}
+                  className="px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Export CSV
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Grouped Records */}
@@ -455,6 +520,22 @@ export default function TransactionHistory({
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
+                          {bulkMode && (
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <input
+                                type="checkbox"
+                                checked={selectedRecords.size === records.length && records.length > 0}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedRecords(new Set(records.map(r => r.id)))
+                                  } else {
+                                    setSelectedRecords(new Set())
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                            </th>
+                          )}
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Date
                           </th>
@@ -490,6 +571,24 @@ export default function TransactionHistory({
                           
                           return (
                             <tr key={record.id} className="hover:bg-gray-50">
+                              {bulkMode && (
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRecords.has(record.id)}
+                                    onChange={(e) => {
+                                      const newSelected = new Set(selectedRecords)
+                                      if (e.target.checked) {
+                                        newSelected.add(record.id)
+                                      } else {
+                                        newSelected.delete(record.id)
+                                      }
+                                      setSelectedRecords(newSelected)
+                                    }}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                </td>
+                              )}
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {new Date(record.date).toLocaleDateString()}
                               </td>

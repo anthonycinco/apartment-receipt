@@ -79,23 +79,9 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'billing' | 'management'>('billing')
   
   // Management state
-  const [sites, setSites] = useState<Site[]>([
-    { id: '1', name: 'Laguna', address: 'Laguna, Philippines', totalUnits: 20, occupiedUnits: 15 },
-    { id: '2', name: 'Pidanna', address: 'Pidanna, Philippines', totalUnits: 15, occupiedUnits: 12 }
-  ])
-  
-  const [tenants, setTenants] = useState<Tenant[]>([
-    { id: '1', name: 'Juan Dela Cruz', siteId: '1', unit: 'A-101', phone: '+63 912 345 6789', email: 'juan@email.com', moveInDate: '2024-01-01', baseRent: 15000, status: 'active' },
-    { id: '2', name: 'Maria Santos', siteId: '1', unit: 'A-102', phone: '+63 912 345 6790', email: 'maria@email.com', moveInDate: '2024-02-01', baseRent: 15000, status: 'active' },
-    { id: '3', name: 'Pedro Reyes', siteId: '2', unit: 'B-201', phone: '+63 912 345 6791', email: 'pedro@email.com', moveInDate: '2024-01-15', baseRent: 18000, status: 'active' }
-  ])
-  
-  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([
-    { id: '1', tenantId: '1', siteId: '1', month: 'January', year: '2024', electricityConsumption: 450, waterConsumption: 25, totalAmount: 18500, date: '2024-01-31' },
-    { id: '2', tenantId: '1', siteId: '1', month: 'February', year: '2024', electricityConsumption: 380, waterConsumption: 22, totalAmount: 17200, date: '2024-02-29' },
-    { id: '3', tenantId: '2', siteId: '1', month: 'February', year: '2024', electricityConsumption: 520, waterConsumption: 28, totalAmount: 19800, date: '2024-02-29' },
-    { id: '4', tenantId: '3', siteId: '2', month: 'February', year: '2024', electricityConsumption: 410, waterConsumption: 24, totalAmount: 22100, date: '2024-02-29' }
-  ])
+  const [sites, setSites] = useState<Site[]>([])
+  const [tenants, setTenants] = useState<Tenant[]>([])
+  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([])
   
   const [billingData, setBillingData] = useState<BillingData>({
     siteName: '',
@@ -377,6 +363,12 @@ export default function Home() {
             billingRecords={billingRecords}
             getSiteById={getSiteById}
             getTenantById={getTenantById}
+            addSite={addSite}
+            updateSite={updateSite}
+            deleteSite={deleteSite}
+            addTenant={addTenant}
+            updateTenant={updateTenant}
+            deleteTenant={deleteTenant}
           />
         )}
       </div>

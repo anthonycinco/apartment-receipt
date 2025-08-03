@@ -42,6 +42,12 @@ interface ManagementPanelProps {
   billingRecords: BillingRecord[]
   getSiteById: (id: string) => Site | undefined
   getTenantById: (id: string) => Tenant | undefined
+  addSite: (site: Omit<Site, 'id'>) => void
+  updateSite: (id: string, updates: Partial<Site>) => void
+  deleteSite: (id: string) => void
+  addTenant: (tenant: Omit<Tenant, 'id'>) => void
+  updateTenant: (id: string, updates: Partial<Tenant>) => void
+  deleteTenant: (id: string) => void
 }
 
 export default function ManagementPanel({
@@ -49,10 +55,41 @@ export default function ManagementPanel({
   tenants,
   billingRecords,
   getSiteById,
-  getTenantById
+  getTenantById,
+  addSite,
+  updateSite,
+  deleteSite,
+  addTenant,
+  updateTenant,
+  deleteTenant
 }: ManagementPanelProps) {
   const [selectedSite, setSelectedSite] = useState<string>('all')
   const [selectedTenant, setSelectedTenant] = useState<string>('all')
+  
+  // Edit states
+  const [editingSite, setEditingSite] = useState<Site | null>(null)
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
+  const [showSiteModal, setShowSiteModal] = useState(false)
+  const [showTenantModal, setShowTenantModal] = useState(false)
+  
+  // Form states
+  const [siteForm, setSiteForm] = useState({
+    name: '',
+    address: '',
+    totalUnits: 0,
+    occupiedUnits: 0
+  })
+  
+  const [tenantForm, setTenantForm] = useState({
+    name: '',
+    siteId: '',
+    unit: '',
+    phone: '',
+    email: '',
+    moveInDate: '',
+    baseRent: 0,
+    status: 'active' as 'active' | 'inactive'
+  })
 
   // Filter records based on selection
   const filteredRecords = billingRecords.filter(record => {
@@ -71,6 +108,84 @@ export default function ManagementPanel({
         return site ? Math.round((site.occupiedUnits / site.totalUnits) * 100) : 0
       })()
 
+  const handleSiteSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (editingSite) {
+      updateSite(editingSite.id, siteForm)
+    } else {
+      addSite(siteForm)
+    }
+    setShowSiteModal(false)
+    setEditingSite(null)
+    setSiteForm({ name: '', address: '', totalUnits: 0, occupiedUnits: 0 })
+  }
+
+  const handleTenantSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (editingTenant) {
+      updateTenant(editingTenant.id, tenantForm)
+    } else {
+      addTenant(tenantForm)
+    }
+    setShowTenantModal(false)
+    setEditingTenant(null)
+    setTenantForm({
+      name: '',
+      siteId: '',
+      unit: '',
+      phone: '',
+      email: '',
+      moveInDate: '',
+      baseRent: 0,
+      status: 'active'
+    })
+  }
+
+  const openSiteModal = (site?: Site) => {
+    if (site) {
+      setEditingSite(site)
+      setSiteForm({
+        name: site.name,
+        address: site.address,
+        totalUnits: site.totalUnits,
+        occupiedUnits: site.occupiedUnits
+      })
+    } else {
+      setEditingSite(null)
+      setSiteForm({ name: '', address: '', totalUnits: 0, occupiedUnits: 0 })
+    }
+    setShowSiteModal(true)
+  }
+
+  const openTenantModal = (tenant?: Tenant) => {
+    if (tenant) {
+      setEditingTenant(tenant)
+      setTenantForm({
+        name: tenant.name,
+        siteId: tenant.siteId,
+        unit: tenant.unit,
+        phone: tenant.phone,
+        email: tenant.email,
+        moveInDate: tenant.moveInDate,
+        baseRent: tenant.baseRent,
+        status: tenant.status
+      })
+    } else {
+      setEditingTenant(null)
+      setTenantForm({
+        name: '',
+        siteId: '',
+        unit: '',
+        phone: '',
+        email: '',
+        moveInDate: '',
+        baseRent: 0,
+        status: 'active'
+      })
+    }
+    setShowTenantModal(true)
+  }
+
   return (
     <div className="space-y-8">
       {/* Sites Management */}
@@ -80,7 +195,10 @@ export default function ManagementPanel({
             <Building2 className="w-5 h-5 mr-2" />
             Sites Management
           </h2>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={() => openSiteModal()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
             Add Site
           </button>
         </div>
@@ -102,10 +220,20 @@ export default function ManagementPanel({
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.address}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.totalUnits}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{site.occupiedUnits}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                    <button className="text-red-600 hover:text-red-900">Delete</button>
-                  </td>
+                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                     <button 
+                       onClick={() => openSiteModal(site)}
+                       className="text-blue-600 hover:text-blue-900 mr-3"
+                     >
+                       Edit
+                     </button>
+                     <button 
+                       onClick={() => deleteSite(site.id)}
+                       className="text-red-600 hover:text-red-900"
+                     >
+                       Delete
+                     </button>
+                   </td>
                 </tr>
               ))}
             </tbody>
@@ -120,7 +248,10 @@ export default function ManagementPanel({
             <Users className="w-5 h-5 mr-2" />
             Tenants Management
           </h2>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={() => openTenantModal()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
             Add Tenant
           </button>
         </div>
@@ -156,10 +287,20 @@ export default function ManagementPanel({
                         {tenant.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                      <button className="text-red-600 hover:text-red-900">Delete</button>
-                    </td>
+                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                       <button 
+                         onClick={() => openTenantModal(tenant)}
+                         className="text-blue-600 hover:text-blue-900 mr-3"
+                       >
+                         Edit
+                       </button>
+                       <button 
+                         onClick={() => deleteTenant(tenant.id)}
+                         className="text-red-600 hover:text-red-900"
+                       >
+                         Delete
+                       </button>
+                     </td>
                   </tr>
                 )
               })}
@@ -271,8 +412,192 @@ export default function ManagementPanel({
                 })}
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  )
-} 
+                 </div>
+       </div>
+
+       {/* Site Modal */}
+       {showSiteModal && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white rounded-lg p-6 w-full max-w-md">
+             <h3 className="text-lg font-semibold mb-4">
+               {editingSite ? 'Edit Site' : 'Add Site'}
+             </h3>
+             <form onSubmit={handleSiteSubmit} className="space-y-4">
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
+                 <input
+                   type="text"
+                   value={siteForm.name}
+                   onChange={(e) => setSiteForm(prev => ({ ...prev, name: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                 <input
+                   type="text"
+                   value={siteForm.address}
+                   onChange={(e) => setSiteForm(prev => ({ ...prev, address: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 />
+               </div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Total Units</label>
+                   <input
+                     type="number"
+                     value={siteForm.totalUnits}
+                     onChange={(e) => setSiteForm(prev => ({ ...prev, totalUnits: parseInt(e.target.value) || 0 }))}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                     required
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Occupied Units</label>
+                   <input
+                     type="number"
+                     value={siteForm.occupiedUnits}
+                     onChange={(e) => setSiteForm(prev => ({ ...prev, occupiedUnits: parseInt(e.target.value) || 0 }))}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                     required
+                   />
+                 </div>
+               </div>
+               <div className="flex space-x-3 pt-4">
+                 <button
+                   type="submit"
+                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                 >
+                   {editingSite ? 'Update' : 'Add'}
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => setShowSiteModal(false)}
+                   className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                 >
+                   Cancel
+                 </button>
+               </div>
+             </form>
+           </div>
+         </div>
+       )}
+
+       {/* Tenant Modal */}
+       {showTenantModal && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white rounded-lg p-6 w-full max-w-md">
+             <h3 className="text-lg font-semibold mb-4">
+               {editingTenant ? 'Edit Tenant' : 'Add Tenant'}
+             </h3>
+             <form onSubmit={handleTenantSubmit} className="space-y-4">
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                 <input
+                   type="text"
+                   value={tenantForm.name}
+                   onChange={(e) => setTenantForm(prev => ({ ...prev, name: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
+                 <select
+                   value={tenantForm.siteId}
+                   onChange={(e) => setTenantForm(prev => ({ ...prev, siteId: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 >
+                   <option value="">Select a site</option>
+                   {sites.map(site => (
+                     <option key={site.id} value={site.id}>{site.name}</option>
+                   ))}
+                 </select>
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                 <input
+                   type="text"
+                   value={tenantForm.unit}
+                   onChange={(e) => setTenantForm(prev => ({ ...prev, unit: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                 <input
+                   type="tel"
+                   value={tenantForm.phone}
+                   onChange={(e) => setTenantForm(prev => ({ ...prev, phone: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                 <input
+                   type="email"
+                   value={tenantForm.email}
+                   onChange={(e) => setTenantForm(prev => ({ ...prev, email: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Move-in Date</label>
+                 <input
+                   type="date"
+                   value={tenantForm.moveInDate}
+                   onChange={(e) => setTenantForm(prev => ({ ...prev, moveInDate: e.target.value }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Base Rent (₱)</label>
+                 <input
+                   type="number"
+                   value={tenantForm.baseRent}
+                   onChange={(e) => setTenantForm(prev => ({ ...prev, baseRent: parseFloat(e.target.value) || 0 }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                 <select
+                   value={tenantForm.status}
+                   onChange={(e) => setTenantForm(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                   required
+                 >
+                   <option value="active">Active</option>
+                   <option value="inactive">Inactive</option>
+                 </select>
+               </div>
+               <div className="flex space-x-3 pt-4">
+                 <button
+                   type="submit"
+                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                 >
+                   {editingTenant ? 'Update' : 'Add'}
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => setShowTenantModal(false)}
+                   className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                 >
+                   Cancel
+                 </button>
+               </div>
+             </form>
+           </div>
+         </div>
+       )}
+     </div>
+   )
+ } 
